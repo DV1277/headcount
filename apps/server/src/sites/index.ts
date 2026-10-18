@@ -4,7 +4,7 @@
  * sites-only router that HEAD mounts on the dedicated HC_SITES_PORT listener.
  * The router never exposes control APIs or arbitrary files.
  */
-import express, { type Router } from 'express';
+import express, { Router } from 'express';
 import { SitePayloadSchema, type SitePayload } from '@hc/contracts';
 import { env } from '../env';
 import { sanitizeSiteHtml } from './sanitize';
