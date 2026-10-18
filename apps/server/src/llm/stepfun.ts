@@ -1,7 +1,7 @@
 // Typed StepFun adapter (A-02): thin, strict wrapper over integrations/stepfun.mjs.
 // Retries, json_schema->json_object fallback and body hygiene live in the .mjs client;
 // here we add the typed surface, deadlines and usage accounting used by the Mayor.
-import { stepfun } from '../../../integrations/index.mjs';
+import { stepfun } from '../../../../integrations/index.mjs';
 import type { Usage } from '../mayor';
 
 export type Completion = { message: { role: string; content: string }; usage: Usage };
@@ -35,10 +35,15 @@ export function addUsage(...parts: (Usage | undefined)[]): Usage {
 
 /** chatRaw always returns a message + usage; content is never null on schema calls (mayor guards this). */
 export async function chatRaw(messages: { role: string; content: string }[], opts: ChatOptions = {}): Promise<Completion> {
-  const res = await stepfun.chatRaw(messages, { retries: 2, ...opts });
+  const { maxTokens, temperature, ...rest } = opts;
+  const payload: Record<string, unknown> = { ...rest };
+  if (maxTokens !== undefined) payload.max_tokens = maxTokens;
+  if (temperature !== undefined) payload.temperature = temperature;
+  const res = await stepfun.chatRaw(messages, { retries: 2, ...payload });
   const content = typeof res.message?.content === 'string' ? res.message.content : JSON.stringify(res.message?.content ?? '');
-  const { cachedIn, ...rest } = res.usage;
-  return { message: { role: String(res.message?.role ?? 'assistant'), content }, usage: cachedIn > 0 ? { ...rest, cachedIn } : rest };
+  const cachedIn = res.usage?.cachedIn;
+  const base = { tokensIn: res.usage?.tokensIn ?? 0, tokensOut: res.usage?.tokensOut ?? 0 };
+  return { message: { role: String(res.message?.role ?? 'assistant'), content }, usage: cachedIn ? { ...base, cachedIn } : base };
 }
 
 /** Text call for human-facing lines; callers cap and vet the result. */
