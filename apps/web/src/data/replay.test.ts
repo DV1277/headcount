@@ -3,8 +3,31 @@ import { initialState, reduce } from '@hc/engine';
 import { loadReplay, parseLog } from './replaySource';
 import { useStore } from './store';
 
-afterEach(()=>{useStore.getState().setPlaying(false);vi.useRealTimers();vi.restoreAllMocks();});
+afterEach(()=>{useStore.getState().setPlaying(false);vi.useRealTimers();vi.restoreAllMocks();vi.unstubAllGlobals();});
 describe('recording sources and state',()=>{
+  it('uses the deployed site in the accepted preview, final card and QR without relabeling earlier drafts',async()=>{
+    vi.stubGlobal('location',{origin:'https://judges.example',pathname:'/demo'});
+    const data=await loadReplay('fixture:live-boba-g2');
+    const site='https://judges.example/sites/run_4hN7Q1M-b-/';
+    expect(data.siteUrl).toBe(site);
+    expect(data.artifacts.a_BKAQGUnIRlTl.url).toBe(site);
+    expect(data.artifacts.a_1FuZ6fRSzvXL.url).toBeUndefined();
+    const completed=data.events.at(-1)!;
+    expect(completed.type==='run.completed'&&completed.data.siteUrl).toBe(site);
+    const state=data.events.reduce(reduce,initialState());
+    expect(state.tasks.t2.artifactId).toBe('a_BKAQGUnIRlTl');
+    expect(state.artifacts.a_BKAQGUnIRlTl.url).toBe(site);
+    expect(data.events[0].type==='run.created'&&data.events[0].data.idea).toBe('Late-night boba delivery for UCLA dorms');
+  });
+  it('loads the public tour without advancing before the founder starts it',async()=>{
+    useStore.getState().openReplay('fixture:live-boba-g2',8,false);
+    await vi.waitFor(()=>expect(useStore.getState().events).toHaveLength(135));
+    expect(useStore.getState().playing).toBe(false);
+    expect(useStore.getState().state.t).toBe(0);
+    expect(useStore.getState().speed).toBe(8);
+    useStore.getState().setPlaying(true);
+    expect(useStore.getState().playing).toBe(true);
+  });
   it('bundles every fixture and rejects path traversal or broken event order',async()=>{
     for(const name of ['golden-boba','failure-retry','redirect']){
       const data=await loadReplay(`fixture:${name}`);expect(data.events.length).toBeGreaterThan(20);

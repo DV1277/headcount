@@ -12,7 +12,7 @@ export type Store = {
   select(a:AgentId|null):void;setOrgChart(on:boolean):void;setReducedMotion(on:boolean):void;
   getArtifact(aid:string):Promise<Artifact>;replan():Promise<void>;startRun(idea:string):Promise<void>;approve(plan:Plan):Promise<void>;
   answer(qid:string,text:string):Promise<void>;redirect(agent:DeptId,note:string):Promise<void>;pause():Promise<void>;resume():Promise<void>;
-  openReplay(src:string,speed?:number):void;scrubTo(t:number):void;backToLive():void;setSpeed(speed:number):void;setPlaying(on:boolean):void;
+  openReplay(src:string,speed?:number,autoplay?:boolean):void;scrubTo(t:number):void;backToLive():void;setSpeed(speed:number):void;setPlaying(on:boolean):void;
 };
 const cueListeners=new Set<(cue:Cue)=>void>();
 const cues$:Subscribe<Cue>=listener=>{cueListeners.add(listener);return()=>{cueListeners.delete(listener);};};
@@ -63,7 +63,7 @@ export const useStore=create<Store>((set,get)=>({
   }),
   approve:plan=>action(()=>api.approve(liveId(),PlanSchema.parse(plan))),answer:(qid,text)=>action(()=>api.answer(liveId(),qid,text)),
   redirect:(agent,note)=>action(()=>api.redirect(liveId(),agent,note)),pause:()=>action(()=>api.pause(liveId())),resume:()=>action(()=>api.resume(liveId())),
-  openReplay:(src,speed=1)=>{
+  openReplay:(src,speed=1,autoplay=true)=>{
     const version=++generation;replay?.destroy();live?.close();live=null;replay=null;artifactCache={};
     set(current=>({state:initialState(),mode:'replay',events:[],duration:0,history:false,error:null,playing:false,connection:'offline',playbackRevision:current.playbackRevision+1}));
     void loadReplay(src).then(data=>{
@@ -74,8 +74,8 @@ export const useStore=create<Store>((set,get)=>({
         set(current=>({state:{...current.state,t},playing:t<(replay?.duration??0)}));
       });
       replay.speed=Math.max(.25,Math.min(20,speed));
-      set(current=>({state:rebuild(data.events,0),events:data.events,duration:replay!.duration,mode:'replay',history:false,speed:replay!.speed,selected:null,playbackRevision:current.playbackRevision+1,connection:'open',playing:replay!.duration>0}));
-      replay.play();
+      set(current=>({state:rebuild(data.events,0),events:data.events,duration:replay!.duration,mode:'replay',history:false,speed:replay!.speed,selected:null,playbackRevision:current.playbackRevision+1,connection:'open',playing:autoplay&&replay!.duration>0}));
+      if(autoplay)replay.play();
     }).catch(error=>{if(version===generation)set({error:error instanceof Error?error.message:'Recording could not be loaded.',playing:false});});
   },
   scrubTo:t=>{

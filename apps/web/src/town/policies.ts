@@ -11,6 +11,32 @@ export const BUBBLE_HOLD_MS = 3200;      // 3.2 s hold
 export const BUBBLE_IN_MS = 140;         // pop-in 0.8 → 1.0
 export const BUBBLE_OUT_MS = 200;        // fade out
 
+/** The event clock may run at 20×; a visual transition still needs several frames. */
+export function visualDuration(baseMs: number, speed: number, minimumMs = 140): number {
+  return Math.max(minimumMs, baseMs / Math.max(0.25, Math.min(4, speed)));
+}
+
+/** Fit canvas labels by measured glyph width, including unbroken words. */
+export function fitCanvasLabel(raw: string, width: number, maxLines: number, measure: (text: string) => number): string {
+  let rest = raw.replace(/\s+/g, ' ').trim();
+  const lines: string[] = [];
+  while (rest && lines.length < maxLines) {
+    if (measure(rest) <= width) { lines.push(rest); break; }
+    let end = rest.length;
+    while (end > 0 && measure(rest.slice(0, end)) > width) end--;
+    if (lines.length === maxLines - 1) {
+      while (end > 0 && measure(`${rest.slice(0, end).trimEnd()}…`) > width) end--;
+      lines.push(`${rest.slice(0, end).trimEnd()}…`);
+      break;
+    }
+    const space = rest.lastIndexOf(' ', end);
+    const cut = space > 0 ? space : Math.max(1, end);
+    lines.push(rest.slice(0, cut).trim());
+    rest = rest.slice(cut).trim();
+  }
+  return lines.join('\n');
+}
+
 export type BubblePriority = 1 | 2 | 3 | 4; // 4 = founder-facing > handoff > tool > flavor
 export type BubbleEntry = { id: number; agent: AgentId; text: string; priority: BubblePriority };
 
@@ -33,6 +59,12 @@ export type BubbleAdmission<T extends BubbleEntry> = {
  * founder-facing note always wins over flavor.
  */
 export function admitBubble<T extends BubbleEntry>(visible: readonly T[], incoming: T): BubbleAdmission<T> {
+  const speaker = visible.find((entry) => entry.agent === incoming.agent);
+  if (speaker) {
+    if (incoming.priority < speaker.priority) return { kept: [...visible], admitted: null, evicted: [] };
+    return { kept: visible.filter((entry) => entry.agent !== incoming.agent).concat(incoming), admitted: incoming,
+      evicted: visible.filter((entry) => entry.agent === incoming.agent) };
+  }
   if (visible.length < BUBBLE_LIMIT) return { kept: [...visible, incoming], admitted: incoming, evicted: [] };
   const weakest = [...visible].sort((a, b) => (a.priority - b.priority) || (a.id - b.id))[0];
   if (incoming.priority > weakest.priority) {

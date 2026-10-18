@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { ROSTER, type AgentId, type ArtifactKind, type BuildingId } from '@hc/contracts';
 import { TILE_SIZE, tileBlocked, type TownPoint } from './map';
 import { dockFor, walkPath } from './routing';
-import { shouldFastForward } from './policies';
+import { fitCanvasLabel, shouldFastForward } from './policies';
 
 // One resident Sim: a container holding shadow, agent-color ground ring, body,
 // face, prop, name tag and the dashed ring. Movement is a per-agent FIFO of
@@ -114,14 +114,19 @@ export class Sim {
   private drawTag(): void {
     if (!this.tagText.scene) return;
     const first = ROSTER[this.id].name.replace('Mayor ', '');
-    const label = this.hover ? `${first} · ${this.statusLabel()}` : first;
+    const label = this.hover ? fitCanvasLabel(`${first} · ${this.statusLabel()}`, 64, 2, (candidate) => {
+      this.tagText.setText(candidate);
+      return this.tagText.width;
+    }) : first;
     this.tagText.setText(label);
     const width = this.tagText.width;
+    const top = this.hover ? -this.tagText.height - 20 : 12;
+    this.tagText.setY(top);
     this.tagBg.clear();
-    this.tagBg.fillStyle(0x211e2b, 0.9).fillRoundedRect(-(width / 2 + 4), 11, width + 8, 10, 2);
+    this.tagBg.fillStyle(0x211e2b, 0.9).fillRoundedRect(-(width / 2 + 4), top - 1, width + 8, this.tagText.height + 3, 2);
     if (this.hover) {
       const color = Phaser.Display.Color.HexStringToColor(ROSTER[this.id].color).color;
-      this.tagBg.lineStyle(1, color, 0.9).strokeRoundedRect(-(width / 2 + 4), 11, width + 8, 10, 2);
+      this.tagBg.lineStyle(1, color, 0.9).strokeRoundedRect(-(width / 2 + 4), top - 1, width + 8, this.tagText.height + 3, 2);
     }
   }
 

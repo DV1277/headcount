@@ -1,5 +1,6 @@
 import { ArtifactSchema, EventEnvelopeSchema, type Artifact, type EventEnvelope } from '@hc/contracts';
 import { api, request } from './api';
+import { absoluteSiteUrl, DEMO_SITE_PATH, isPublicDemo } from './siteUrl';
 
 const logs=import.meta.glob('../../../../fixtures/runs/*.jsonl',{query:'?raw',import:'default',eager:true}) as Record<string,string>;
 const artifactFiles=import.meta.glob('../../../../fixtures/runs/*.artifacts.json',{query:'?raw',import:'default',eager:true}) as Record<string,string>;
@@ -64,9 +65,22 @@ export async function loadReplay(src:string):Promise<ReplayData> {
   if (!(key+'.jsonl' in logs)) throw new Error(`Recording '${name}' is not available.`);
   const values=JSON.parse(artifactFiles[key+'.artifacts.json']??'{}') as Record<string,unknown>;
   const artifacts=Object.fromEntries(Object.entries(values).map(([id,value])=>[id,ArtifactSchema.parse(value)]));
-  const siteUrl=sites[key+'.site.html']??null;
-  if (siteUrl) for (const artifact of Object.values(artifacts)) if (artifact.kind==='site') artifact.url=siteUrl;
-  return {events:parseLog(logs[key+'.jsonl']),artifacts,siteUrl};
+  let events=parseLog(logs[key+'.jsonl']);
+  const siteUrl=name==='live-boba-g2'&&isPublicDemo()
+    ? absoluteSiteUrl(DEMO_SITE_PATH)
+    : absoluteSiteUrl(sites[key+'.site.html']??null);
+  const finalSiteId=[...events].reverse().find(e=>e.type==='artifact.created'&&e.data.artifact.kind==='site');
+  if (siteUrl && finalSiteId?.type==='artifact.created') {
+    const id=finalSiteId.data.artifact.id;
+    for (const artifact of Object.values(artifacts)) if (artifact.kind==='site') {
+      // Earlier versions retain their own HTML rather than previewing the accepted version.
+      artifact.url=artifact.id===id?siteUrl:undefined;
+    }
+    events=events.map(event=>event.type==='artifact.created'&&event.data.artifact.id===id
+      ? {...event,data:{...event.data,artifact:{...event.data.artifact,url:siteUrl}}}
+      : event.type==='run.completed'?{...event,data:{...event.data,siteUrl}}:event);
+  }
+  return {events,artifacts,siteUrl};
 }
 
 /** A monotonic recording clock. Seeking rebuilds state in the store without cues. */

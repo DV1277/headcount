@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ROSTER, type Artifact, type BriefPayload, type LaunchKitPayload, type ResearchPayload, type SitePayload } from '@hc/contracts';
 import { useStore } from '../data/store';
+import { absoluteSiteUrl } from '../data/siteUrl';
 import { Markdown } from './Markdown';
 import { QrCode } from './QrCode';
 import { ARTIFACT_ICON, IconClose, IconExternal, IconReplay, IconWarn } from './icons';
@@ -67,28 +68,23 @@ function ResearchViewer({ payload }: { payload: ResearchPayload }) {
 }
 
 function SiteViewer({ artifact, payload }: { artifact: Artifact; payload: SitePayload }) {
-  const rawUrl=artifact.url;
-  const bundledPreview=Boolean(rawUrl?.startsWith('/')&&!rawUrl.startsWith('//'));
-  const url = rawUrl ? (rawUrl.startsWith('/')&&!rawUrl.startsWith('//')?rawUrl:safeWebHref(rawUrl))??null : null;
-  const kind = publicUrlKind(url);
+  const url = absoluteSiteUrl(artifact.url);
   const frameProps = url
     ? { src: url, srcDoc: undefined as string | undefined }
     : { src: undefined as string | undefined, srcDoc: payload.html };
   return <>
     <dl className="hc-viewer-facts">
       <div><dt>Headline</dt><dd>{payload.headline}</dd></div>
-      <div><dt>Link</dt><dd className="hc-viewer-url">{bundledPreview?'Bundled offline preview':url ? <code>{url}</code> : 'No published URL yet'}</dd></div>
+      <div><dt>Link</dt><dd className="hc-viewer-url">{url ? <code>{url}</code> : 'Earlier version · HTML preview below'}</dd></div>
     </dl>
     <iframe className="hc-site-frame" title={`Site preview: ${artifact.title}`} sandbox="" referrerPolicy="no-referrer" loading="lazy" {...frameProps} />
     <div className="hc-qr-block">
-      {url && kind !== 'local' && kind !== 'none'
-        ? <figure className="hc-qr-figure">
-          <QrCode value={url} />
-          <figcaption>{kind === 'public' ? 'Scan to open this site on your phone.' : 'Works on the venue Wi-Fi only — not on cellular.'}</figcaption>
-        </figure>
-        : <p className="hc-local-note" data-tone="muted">{bundledPreview?'This saved preview works offline. The final card keeps the original public link and QR.':'Local preview only — this link works on this machine until a public URL is configured. Scan-ready QR appears once the site is published to a public address.'}</p>}
+      {url && <figure className="hc-qr-figure">
+        <QrCode value={url} />
+        <figcaption>Scan to open this site on your phone.</figcaption>
+      </figure>}
       <div className="hc-viewer-actions">
-        {url && !bundledPreview && <CopyButton text={url} label="Copy link" />}
+        {url && <CopyButton text={url} label="Copy link" />}
         <DownloadButton name={artifactFileName(artifact.id, 'site')} text={payload.html} mime="text/html" />
       </div>
     </div>
@@ -232,9 +228,10 @@ export function FinalCard({ replaySrc, onReplay, onOpenArtifact, onClose }: { re
   const briefMeta = Object.values(state.artifacts).find((a) => a.kind === 'brief');
   const briefId = briefMeta?.id ?? null;
   useEffect(() => { if (briefId) return loadArtifact(briefId, setLoad); setLoad({ kind: 'error', message: 'no-brief' }); return undefined; }, [briefId]);
-  const siteArtifact = Object.values(state.artifacts).find((a) => a.kind === 'site');
+  const siteTask = Object.values(state.tasks).find(task=>task.def.deliverable==='site'&&task.artifactId);
+  const siteArtifact = siteTask?.artifactId ? state.artifacts[siteTask.artifactId] : undefined;
   const illustrative = mode === 'replay' && isIllustrativeRecording(replaySrc);
-  const candidateUrl = illustrative ? null : completed && completed.type === 'run.completed' ? completed.data.siteUrl ?? siteArtifact?.url ?? null : siteArtifact?.url ?? null;
+  const candidateUrl = absoluteSiteUrl(completed?.type === 'run.completed' ? completed.data.siteUrl ?? siteArtifact?.url : siteArtifact?.url);
   const urlKind = publicUrlKind(candidateUrl);
   const deliverables = Object.values(state.tasks).filter((task) => task.def.enabled && task.status !== 'skipped');
   const stats = completed && completed.type === 'run.completed' ? completed.data.stats : null;
@@ -272,13 +269,13 @@ export function FinalCard({ replaySrc, onReplay, onOpenArtifact, onClose }: { re
         })}
       </div>
       <div className="hc-final-qr">
-        {candidateUrl && urlKind !== 'local' && urlKind !== 'none'
+        {candidateUrl
           ? <>
             <div className="hc-qr-card"><QrCode value={candidateUrl} size={168} /></div>
             <a className="hc-final-host" href={candidateUrl} target="_blank" rel="noopener noreferrer">{host}</a>
-            <span className="hc-final-qr-note">{urlKind === 'public' ? 'Scan to open on your phone.' : 'Venue Wi-Fi only — not on cellular.'}</span>
+            <span className="hc-final-qr-note">Scan to open on your phone.</span>
           </>
-          : <p className="hc-local-note" data-tone="muted">{illustrative ? 'This fixture has a local site preview. Sample addresses are not published sites.' : candidateUrl ? 'Site link is local-only for now — a public QR appears once a public URL is configured.' : 'No site URL was produced for this run.'}</p>}
+          : <p className="hc-local-note" data-tone="muted">No site URL was produced for this run.</p>}
       </div>
     </div>
     <dl className="hc-final-stats">

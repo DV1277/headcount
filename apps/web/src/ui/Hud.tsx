@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import '@fontsource/ibm-plex-sans/latin-400.css';
 import '@fontsource/ibm-plex-sans/latin-500.css';
 import '@fontsource/ibm-plex-sans/latin-600.css';
@@ -24,6 +24,8 @@ import { Shelf } from './Shelf';
 import { ArtifactViewer, FinalCard, QuestionModal } from './Viewers';
 import { chime, setSoundEnabled, soundEnabled } from './sound';
 import '../styles/hud.css';
+import type { DemoChapter } from '../demo/chapters';
+import { DEMO_RECORDING } from '../data/siteUrl';
 
 const stateLabels: Record<string, string> = {
   drafting: 'Mayor is planning', awaiting_founder: 'Founder input needed',
@@ -70,12 +72,12 @@ function ToastRow({ toast, onClose }: { toast: Toast; onClose(): void }) {
   </div>;
 }
 
-export default function Hud() {
+export default function Hud({publicDemo=false,guided=false,demoCue=null,demoControls,onDemoRestart}: {publicDemo?:boolean;guided?:boolean;demoCue?:DemoChapter|null;demoControls?:ReactNode;onDemoRestart?:()=>void}) {
   const { state, mode, speed, selected, history, connection, events, duration, playing, playbackRevision, reducedMotion, error, orgChart, select, setSpeed, setPlaying, openReplay, scrubTo, backToLive, pause, resume, setOrgChart } = useStore();
   const hudOnly = useMemo(() => new URLSearchParams(location.search).get('hud-only') === '1', []);
   // ?preview=question opens the founder-question modal read-only during a replay (design review aid).
   const previewQuestion = useMemo(() => new URLSearchParams(location.search).get('preview') === 'question', []);
-  const [replaySrc, setReplaySrc] = useState(() => new URLSearchParams(location.search).get('replay') ?? 'fixture:golden-boba');
+  const [replaySrc, setReplaySrc] = useState(() => new URLSearchParams(location.search).get('replay') ?? (publicDemo?DEMO_RECORDING:'fixture:golden-boba'));
   const [showEvents, setShowEvents] = useState(false);
   const [planOpen, setPlanOpen] = useState(false);
   const [planAuto, setPlanAuto] = useState(false);
@@ -93,7 +95,7 @@ export default function Hud() {
 
   const plan = state.plan;
   const hasRun = Boolean(state.runId);
-  const liveEditable = mode === 'live' && !history;
+  const liveEditable = !publicDemo && mode === 'live' && !history;
   const runFinished = state.status === 'completed' || state.status === 'failed';
   const runActive = hasRun && !runFinished;
   const canApprovePlan = liveEditable && state.status === 'awaiting_approval';
@@ -224,6 +226,20 @@ export default function Hud() {
     }
   }, [mode]);
 
+  useEffect(() => {
+    if (!demoCue) {
+      if(publicDemo){setPlanOpen(false);setViewerId(null);setFinalOpen(false);setQuestionOpen(false);setOrgChart(false);select(null);}
+      return;
+    }
+    setPlanAuto(false); setQuestionOpen(false);
+    setPlanOpen(demoCue.view==='plan');
+    setViewerId(['research','site','launch'].includes(demoCue.view)?demoCue.artifactId??null:null);
+    setFinalOpen(demoCue.view==='final');
+    setShowEvents(demoCue.view==='logs');
+    select(demoCue.view==='agent'?demoCue.agent??null:null);
+    setOrgChart(demoCue.view==='org');
+  }, [demoCue?.id]);
+
   const active: ModalState =
     questionOpen && unanswered ? { kind: 'question', qid: unanswered.qid, text: unanswered.text }
       : planOpen && plan ? { kind: 'plan' }
@@ -328,11 +344,12 @@ export default function Hud() {
   const showInspector = Boolean(selected);
   const illustrative = mode === 'replay' && isIllustrativeRecording(replaySrc);
   const canPause = mode === 'live' && !history && (state.status === 'running' || state.status === 'paused');
-  const showCommand = mode === 'live' && !hasRun;
-  const recordings = !ILLUSTRATIVE_RECORDINGS.includes(replaySrc) && mode === 'replay' ? [...RECORDINGS, { value: replaySrc, label: 'Recorded run' }] : RECORDINGS;
-  const returnToRun = () => { if (liveRunRef.current) void connectRun(liveRunRef.current).catch(() => {}); else window.location.assign('/'); };
+  const showCommand = !publicDemo && mode === 'live' && !hasRun;
+  const recordings = publicDemo ? [RECORDINGS[0]] : !RECORDINGS.some(item=>item.value===replaySrc) && mode === 'replay' ? [...RECORDINGS, { value: replaySrc, label: 'Recorded run' }] : RECORDINGS;
+  const returnToRun = () => { if(publicDemo){onDemoRestart?.();return;} if (liveRunRef.current) void connectRun(liveRunRef.current).catch(() => {}); else window.location.assign('/'); };
 
-  return <div className="hc-hud" data-reduced={reducedMotion ? 'true' : 'false'} data-shelf={showShelf} data-inspector={showInspector} data-org={orgChart}>
+  return <div className="hc-hud" data-guided={guided} data-replay={mode === 'replay'} data-reduced={reducedMotion ? 'true' : 'false'} data-shelf={showShelf} data-inspector={showInspector} data-org={orgChart}>
+    {!active && demoControls}
     <header className="hc-topbar">
       <h1 className="hc-brand"><span className="hc-brand-mark" aria-hidden="true"><i /></span>HEADCOUNT: 1</h1>
       <span className="hc-mode" data-mode={badge.tone} title={!hasRun ? 'No run has started.' : connection === 'open' ? undefined : `Connection: ${connection}`}>
@@ -340,7 +357,9 @@ export default function Hud() {
       </span>
       <div className="hc-run-title">{runTitle}{connection !== 'open' && mode === 'live' && hasRun && !runFinished ? ` · ${connection}` : ''}</div>
       <div className="hc-top-actions">
-        {mode === 'replay' && <button className="hc-btn" type="button" onClick={returnToRun}>{liveRunRef.current ? 'Return to run' : 'New company'}</button>}
+        {mode === 'replay' && <button className="hc-btn" type="button" aria-label={publicDemo?'Restart demo':liveRunRef.current ? 'Return to run' : 'New company'} onClick={returnToRun}>
+          <span className="hc-return-long">{publicDemo?'Restart demo':liveRunRef.current ? 'Return to run' : 'New company'}</span><span className="hc-return-short" aria-hidden="true">{publicDemo?'Restart':liveRunRef.current ? 'Return' : 'New'}</span>
+        </button>}
         <details className="hc-payroll">
           <summary className="hc-btn hc-payroll-pill" title={`Payroll ${mode === 'replay' ? '(recorded)' : 'this run'} — per-agent breakdown`}>
             <IconCoin size={14} /><span>{state.payroll.credits.toFixed(0)} cr · ${state.payroll.usd.toFixed(2)}</span>
@@ -357,9 +376,9 @@ export default function Hud() {
             })}
           </div>
         </details>
-        <button className="hc-icon-btn" type="button" aria-label={state.status === 'paused' ? 'Resume run' : 'Pause run'} disabled={!canPause} title={canPause ? undefined : history ? 'Live controls are disabled while viewing history.' : 'Pause is available while a live run is working.'}
+        <button className="hc-icon-btn hc-run-pause" type="button" aria-label={state.status === 'paused' ? 'Resume run' : 'Pause run'} disabled={!canPause} title={canPause ? undefined : history ? 'Live controls are disabled while viewing history.' : 'Pause is available while a live run is working.'}
           onClick={() => { void (state.status === 'running' ? pause() : resume()).catch(() => {}); }}>{state.status === 'paused' ? <IconPlay size={16} /> : <IconPause size={16} />}</button>
-        <button className="hc-btn hc-org-toggle" type="button" aria-pressed={orgChart} onClick={() => setOrgChart(!orgChart)} title="Org chart (O)"><IconOrg size={16} /><span>Org</span></button>
+        <button className="hc-btn hc-org-toggle" type="button" aria-label="Org" aria-pressed={orgChart} onClick={() => setOrgChart(!orgChart)} title="Org chart (O)"><IconOrg size={16} /><span>Org</span></button>
         <button className="hc-icon-btn" type="button" aria-pressed={sound} aria-label={sound ? 'Mute sound effects' : 'Turn on sound effects'} title={sound ? 'Sound effects on' : 'Sound effects off'} onClick={toggleSound}>{sound ? <IconSound size={16} /> : <IconMute size={16} />}</button>
       </div>
     </header>
@@ -403,10 +422,11 @@ export default function Hud() {
     {error && <div className="hc-error-bar" role="alert"><strong>Could not load run.</strong><span>{error}</span><button className="hc-btn hc-btn--sm" type="button" onClick={() => beginReplay(replaySrc.startsWith('fixture:') ? replaySrc : 'fixture:golden-boba')}>Try fixture instead</button></div>}
 
     <dialog className="hc-scrim" ref={modalRef} id="hc-plan-dialog" aria-labelledby="hc-modal-title" onCancel={(event) => { event.preventDefault(); dismissModal(); }} onClose={dismissModal} onMouseDown={(e) => { if (e.target === e.currentTarget) dismissModal(); }}>
+      {active && demoControls}
       {active?.kind === 'plan' && plan && <PlanModal key={`${state.runId}:${planSeq}`} plan={plan} editable={canApprovePlan} onApproved={() => { setPlanOpen(false); setPlanAuto(false); planAutoRef.current = planSeq; }} onClose={dismissModal} />}
       {active?.kind === 'question' && <QuestionModal key={active.qid} qid={active.qid} text={active.text} onClose={dismissModal} />}
       {active?.kind === 'viewer' && <ArtifactViewer key={`${state.runId}:${active.artifactId}`} artifactId={active.artifactId} onClose={dismissModal} />}
-      {active?.kind === 'final' && <FinalCard key={state.runId} replaySrc={replaySrc} onReplay={beginReplay} onOpenArtifact={setViewerId} onClose={dismissModal} />}
+      {active?.kind === 'final' && <FinalCard key={state.runId} replaySrc={replaySrc} onReplay={publicDemo?()=>onDemoRestart?.():beginReplay} onOpenArtifact={setViewerId} onClose={dismissModal} />}
     </dialog>
   </div>;
 }

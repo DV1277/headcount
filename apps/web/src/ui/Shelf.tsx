@@ -90,9 +90,9 @@ export function Shelf(p: ShelfProps) {
     </div>
 
     <div className="hc-shelf-tools">
-      {p.hasPlan && <button type="button" className="hc-ghost" aria-expanded={p.planOpen} onClick={p.onTogglePlan}><IconList size={14} /><span>Plan · {Object.keys(state.tasks).length} tasks</span></button>}
-      <button type="button" className="hc-ghost" aria-expanded={p.showLog} aria-controls="hc-event-log" onClick={p.onToggleLog}><IconList size={14} /><span>{p.showLog ? 'Hide event log' : `Event log · ${p.logEvents.length}`}</span></button>
-      {p.canShowFinal && <button type="button" className="hc-ghost" onClick={p.onFinal}><span>Founder brief</span></button>}
+      {p.hasPlan && <button type="button" className="hc-ghost" aria-label={`Plan · ${Object.keys(state.tasks).length} tasks`} title="Open plan" aria-expanded={p.planOpen} onClick={p.onTogglePlan}><IconList size={14} /><span>Plan · {Object.keys(state.tasks).length} tasks</span></button>}
+      <button type="button" className="hc-ghost" aria-label={p.showLog ? 'Hide event log' : `Event log · ${p.logEvents.length}`} title="Event log" aria-expanded={p.showLog} aria-controls="hc-event-log" onClick={p.onToggleLog}><IconList size={14} /><span>{p.showLog ? 'Hide event log' : `Event log · ${p.logEvents.length}`}</span></button>
+      {p.canShowFinal && <button type="button" className="hc-ghost" aria-label="Founder brief" title="Founder brief" onClick={p.onFinal}><IconList size={14} /><span>Founder brief</span></button>}
     </div>
     {p.showLog && <section className="hc-event-log" id="hc-event-log" aria-label="Events reached so far">
       <h3 className="hc-section-title">Recent events</h3>

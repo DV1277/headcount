@@ -51,7 +51,7 @@ export function OrgChart({ state, events, reduced, onClose }: Props) {
 
   // FLIP: every node flies from its sim's screen position to its chart slot (PRD §10.4).
   useLayoutEffect(() => {
-    if (reduced) return;
+    if (reduced || matchMedia('(max-width: 760px)').matches) return;
     const sims = getSimPositions();
     if (!sims) return;
     for (const id of Object.keys(ROSTER) as AgentId[]) {
@@ -132,6 +132,13 @@ export function OrgChart({ state, events, reduced, onClose }: Props) {
           </div>
         </div>;
       })}
+    </div>
+
+    <div className="hc-org-handoff-list">
+      <h3>Recorded handoffs</h3>
+      {handoffs.length ? handoffs.map((h) => <p key={`${h.from}>${h.to}`}>
+        {ROSTER[h.from].name} → {ROSTER[h.to].name} · {h.count} handoff{h.count === 1 ? '' : 's'}
+      </p>) : <p>No department handoffs yet.</p>}
     </div>
 
     <div className="hc-org-legend">

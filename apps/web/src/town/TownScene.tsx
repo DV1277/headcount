@@ -3,7 +3,7 @@ import { ROSTER, type AgentId, type ArtifactKind, type BuildingId, type EventEnv
 import type { Cue } from '@hc/engine';
 import { bridge } from '../bridge';
 import {
-  admitBubble, BUBBLE_HOLD_MS, BUBBLE_IN_MS, BUBBLE_OUT_MS, motionWord, truncateText,
+  admitBubble, BUBBLE_HOLD_MS, BUBBLE_IN_MS, BUBBLE_OUT_MS, fitCanvasLabel, motionWord, truncateText, visualDuration,
   type BubbleEntry, type BubblePriority,
 } from './policies';
 import { buildSnapshot, type SimSnapshot } from './snapshot';
@@ -34,6 +34,7 @@ type BuildingFxView = {
   alertFade: Phaser.Tweens.Tween | null;
   badgeX: number;
   badgeY: number;
+  activeGlow?: string;
 };
 
 type ItemView = {
@@ -43,6 +44,7 @@ type ItemView = {
   slot: number;
   landing: boolean;
   pendingStamp: boolean;
+  motion: Phaser.Tweens.Tween[];
   stamp: { verdict: 'accept' | 'revise'; g: Phaser.GameObjects.Graphics; text: Phaser.GameObjects.Text } | null;
 };
 
@@ -50,6 +52,9 @@ type BubbleView = {
   entry: BubbleEntry;
   container: Phaser.GameObjects.Container;
   holdTimer: Phaser.Time.TimerEvent | null;
+  width: number;
+  height: number;
+  retiring: boolean;
 };
 
 export type SceneController = {
@@ -68,7 +73,7 @@ export type SceneRef = { current: SceneController | null };
 export type SnapSource = () => { events: readonly EventEnvelope[]; t: number };
 export type SyncSource = () => {
   progress: number; speed: number; reduced: boolean;
-  selected: AgentId | null; statuses: Record<AgentId, string>;
+  selected: AgentId | null; statuses: Record<AgentId, string>; title?: string;
 };
 
 export class TownScene extends Phaser.Scene {
@@ -87,6 +92,13 @@ export class TownScene extends Phaser.Scene {
   private celebrating = false;
   private zz = new Map<AgentId, Phaser.GameObjects.Text>();
   private boardText: Phaser.GameObjects.Text | null = null;
+  private boardTitle = '';
+  private nightTween: Phaser.Tweens.Tween | null = null;
+  private received = new Set<string>();
+  private celebrated = new Set<AgentId>();
+  private celebrationAgents: readonly AgentId[] = [];
+  private puffs = new Set<Phaser.GameObjects.Arc>();
+  private effectGeneration = 0;
   private night: Phaser.GameObjects.Graphics | null = null;
   private lampGlows: Phaser.GameObjects.Graphics | null = null;
   private nightAlpha = 0;
@@ -203,21 +215,13 @@ export class TownScene extends Phaser.Scene {
   }
 
   setBoardTitle(title: string): void {
+    this.boardTitle = title;
     if (!this.boardText) return;
-    const text = title.trim() || 'OPEN FOR\nBUSINESS';
-    const words = text.split(/\s+/);
-    // Break into at most two balanced lines for the 38px board.
-    let broken = text;
-    if (words.length > 1) {
-      let best = 1;
-      let diff = Infinity;
-      for (let i = 1; i < words.length; i++) {
-        const d = Math.abs(words.slice(0, i).join(' ').length - words.slice(i).join(' ').length);
-        if (d < diff) { diff = d; best = i; }
-      }
-      broken = `${words.slice(0, best).join(' ')}\n${words.slice(best).join(' ')}`;
-    }
-    this.boardText.setText(broken.length > 28 ? `${broken.slice(0, 27)}…` : broken);
+    const label = fitCanvasLabel(title.trim() || 'OPEN FOR BUSINESS', 34, 2, (candidate) => {
+      this.boardText!.setText(candidate);
+      return this.boardText!.width;
+    });
+    this.boardText.setText(label);
   }
 
   private drawNight() {
@@ -271,6 +275,7 @@ export class TownScene extends Phaser.Scene {
   }
 
   private refreshTexts() {
+    this.setBoardTitle(this.boardTitle);
     for (const sim of this.sims.values()) sim.refreshTag();
     for (const item of this.items) {
       if (item.stamp) item.stamp.text.setResolution(4);
@@ -292,6 +297,7 @@ export class TownScene extends Phaser.Scene {
     this.setNightAlpha();
     this.setSelected(sync.selected);
     this.setAgentStatuses(sync.statuses);
+    this.setBoardTitle(sync.title ?? this.boardTitle);
   }
 
   /** Rebuild the town from the append-only log at the current clock (§8.5). */
@@ -326,7 +332,21 @@ export class TownScene extends Phaser.Scene {
   }
 
   private clearTransientFX() {
+    // Seeking replaces the whole visual state. Counter tweens and delayed
+    // callbacks must not write into sprites recreated for the new clock.
+    this.effectGeneration += 1;
+    this.tweens.killAll();
+    this.time.removeAllEvents();
+    this.cameras.main.resetFX();
+    this.nightTween = null;
+    this.verdicts.clear();
+    this.received.clear();
+    this.celebrated.clear();
+    this.celebrationAgents = [];
+    for (const puff of this.puffs) puff.destroy();
+    this.puffs.clear();
     for (const [, carried] of this.carried) {
+      carried?.bob?.stop();
       if (carried) this.tweens.killTweensOf(carried.sprite);
       carried?.sprite.destroy();
     }
@@ -369,10 +389,18 @@ export class TownScene extends Phaser.Scene {
     }
   }
 
+  private scheduleEffect(delay: number, callback: () => void) {
+    const generation = this.effectGeneration;
+    // Phaser's removeAllEvents only removes active timers, not timers queued
+    // for insertion this frame. Fence those callbacks across seek/restart too.
+    return this.time.delayedCall(delay, () => {
+      if (generation === this.effectGeneration) callback();
+    });
+  }
+
   private rebuildItems(next: SimSnapshot['items']) {
     for (const item of this.items) {
-      item.sprite.destroy();
-      if (item.stamp) { item.stamp.g.destroy(); item.stamp.text.destroy(); }
+      this.destroyItem(item);
     }
     this.items = [];
     for (const entry of next) {
@@ -383,7 +411,7 @@ export class TownScene extends Phaser.Scene {
       sprite.setDepth(slot.y * TILE_SIZE + 4);
       sprite.setInteractive({ useHandCursor: true });
       sprite.on('pointerdown', () => bridge.emit('openArtifact', { artifactId: entry.artifactId }));
-      const view: ItemView = { sprite, artifactId: entry.artifactId, kind: entry.kind, slot: entry.slot, landing: false, pendingStamp: false, stamp: null };
+      const view: ItemView = { sprite, artifactId: entry.artifactId, kind: entry.kind, slot: entry.slot, landing: false, pendingStamp: false, stamp: null, motion: [] };
       this.items.push(view);
       if (entry.verdict) this.drawStamp(view, entry.verdict, true);
     }
@@ -432,6 +460,8 @@ export class TownScene extends Phaser.Scene {
   // --- building FX ------------------------------------------------------------
 
   private applyGlow(fx: BuildingFxView, on: boolean, color: string | undefined, instant: boolean) {
+    if (!instant && on && color && fx.activeGlow === color) return;
+    fx.activeGlow = on ? color : undefined;
     fx.glowTween?.stop();
     fx.glowTween = null;
     this.tweens.killTweensOf(fx.glow);
@@ -440,22 +470,23 @@ export class TownScene extends Phaser.Scene {
         fx.glow.setAlpha(0);
         return;
       }
-      fx.glowTween = this.tweens.add({ targets: fx.glow, alpha: 0, duration: 300 / this.speed });
+      fx.glowTween = this.tweens.add({ targets: fx.glow, alpha: 0, duration: visualDuration(300, this.speed, 180) });
       return;
     }
     if (instant || this.reduced) {
-      fx.glow.setAlpha(1);
+      fx.glow.setAlpha(0.75);
       return;
     }
     fx.glowTween = this.tweens.add({
       targets: fx.glow,
       alpha: { from: fx.glow.alpha, to: 0.75 },
-      duration: 300 / this.speed,
+      duration: visualDuration(300, this.speed, 180),
       ease: 'Sine.easeOut',
       onComplete: () => {
-        // 1.2 s breathing pulse while the owner works inside.
+        // Keep ambient breathing on wall time; accelerated replay uses a steady light.
+        if (this.speed > 4) return;
         fx.glowTween = this.tweens.add({
-          targets: fx.glow, alpha: { from: 0.75, to: 0.5 }, yoyo: true, repeat: -1, duration: 600 / this.speed, ease: 'Sine.easeInOut',
+          targets: fx.glow, alpha: { from: 0.75, to: 0.5 }, yoyo: true, repeat: -1, duration: 600, ease: 'Sine.easeInOut',
         });
       },
     });
@@ -466,6 +497,7 @@ export class TownScene extends Phaser.Scene {
     fx.alertTween = null;
     fx.alertFade?.stop();
     fx.alertFade = null;
+    if (fx.alertText) this.tweens.killTweensOf(fx.alertText);
     fx.alertText?.destroy();
     fx.alertText = null;
     this.tweens.killTweensOf(fx.alert);
@@ -492,15 +524,15 @@ export class TownScene extends Phaser.Scene {
       fx.alertText.setResolution(4);
     }
     if (tone === 'error') this.spawnPuff({ x: fx.badgeX, y: fx.badgeY - 10 });
-    if (instant || this.reduced) {
+    if (instant || this.reduced || this.speed > 4) {
       fx.alert.setAlpha(1);
       fx.alertText.setScale(1);
       return;
     }
     fx.alert.setAlpha(0);
-    fx.alertFade = this.tweens.add({ targets: fx.alert, alpha: 1, duration: 220 / this.speed });
+    fx.alertFade = this.tweens.add({ targets: fx.alert, alpha: 1, duration: 220 });
     fx.alertTween = this.tweens.add({
-      targets: fx.alertText, scale: { from: 0.6, to: 1.18 }, duration: 300 / this.speed, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+      targets: fx.alertText, scale: { from: 0.95, to: 1.05 }, duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });
   }
 
@@ -515,12 +547,11 @@ export class TownScene extends Phaser.Scene {
     });
     for (const evicted of admission.evicted) {
       const victim = this.bubbles.find((view) => view.entry.id === evicted.id);
-      if (victim) this.retireBubble(victim, this.reduced ? 0 : 120 / this.speed);
+      if (victim) this.retireBubble(victim, 0);
     }
     const adoption = admission.admitted;
     if (!adoption) return;
 
-    const visible = sim.container.visible;
     const textObj = this.add.text(0, 0, text, {
       fontFamily: 'Pixelify Sans, monospace', fontSize: '8px', color: '#1d1a2b',
       wordWrap: { width: 116, useAdvancedWrap: true },
@@ -534,16 +565,11 @@ export class TownScene extends Phaser.Scene {
     bg.lineStyle(1, 0x1d1a2b, 1).strokeRect(-5.5, -3.5, pw + 11, ph + 7);
     bg.fillStyle(0xf6efe1, 1).fillRect(2, ph + 3, 5, 2).fillRect(2, ph + 5, 3, 2).fillRect(2, ph + 7, 1, 1);
     bg.fillStyle(0x1d1a2b, 1).fillRect(1, ph + 4, 1, 4).fillRect(2, ph + 8, 1, 1).fillRect(3, ph + 6, 1, 2).fillRect(5, ph + 5, 1, 1).fillRect(7, ph + 3, 1, 2);
-    const container = this.add.container(0, 0, [bg, textObj]);
-    if (visible) sim.container.add(container);
-    else {
-      // Hidden speaker: the bubble rises from their doorway instead.
-      container.setPosition(sim.container.x + 8, sim.container.y - 34);
-      container.setDepth(DEPTH_TOP - 20);
-    }
+    const container = this.add.container(0, 0, [bg, textObj]).setDepth(DEPTH_TOP - 10);
 
-    const view: BubbleView = { entry: adoption, container, holdTimer: null };
+    const view: BubbleView = { entry: adoption, container, holdTimer: null, width: pw, height: ph, retiring: false };
     this.bubbles.push(view);
+    this.positionBubble(view);
     if (this.reduced) container.setAlpha(1);
     else {
       container.setAlpha(0);
@@ -552,17 +578,20 @@ export class TownScene extends Phaser.Scene {
         alpha: { from: 0, to: 1 },
         scaleX: { from: 0.8, to: 1 },
         scaleY: { from: 0.8, to: 1 },
-        duration: BUBBLE_IN_MS / this.speed,
+        duration: visualDuration(BUBBLE_IN_MS, this.speed),
       });
     }
-    view.holdTimer = this.time.delayedCall(BUBBLE_HOLD_MS / this.speed, () => {
+    view.holdTimer = this.scheduleEffect(visualDuration(BUBBLE_HOLD_MS, this.speed, 1800), () => {
       view.holdTimer = null;
-      this.retireBubble(view, BUBBLE_OUT_MS / this.speed);
+      this.retireBubble(view, visualDuration(BUBBLE_OUT_MS, this.speed, 160));
     });
   }
 
   private retireBubble(view: BubbleView, fadeMs: number) {
     if (!this.bubbles.includes(view)) return;
+    if (view.retiring && fadeMs > 0) return;
+    view.retiring = true;
+    this.tweens.killTweensOf(view.container);
     if (view.holdTimer) { view.holdTimer.remove(false); view.holdTimer = null; }
     const kill = () => {
       view.container.destroy();
@@ -570,6 +599,31 @@ export class TownScene extends Phaser.Scene {
     };
     if (fadeMs <= 0) kill();
     else this.tweens.add({ targets: view.container, alpha: 0, duration: fadeMs, onComplete: kill });
+  }
+
+  private positionBubble(view: BubbleView) {
+    const sim = this.sims.get(view.entry.agent);
+    if (!sim) return;
+    const x = Phaser.Math.Clamp(sim.container.x - view.width / 2, 8, MAP_WIDTH - view.width - 8);
+    let y = Math.max(8, sim.container.y - view.height - 32);
+    for (const other of this.bubbles) {
+      if (other === view || other.entry.id > view.entry.id) continue;
+      const at = other.container;
+      if (x < at.x + other.width + 12 && x + view.width + 12 > at.x && y < at.y + other.height + 12 && y + view.height + 12 > at.y) {
+        y = Math.max(8, at.y - view.height - 16);
+      }
+    }
+    view.container.setPosition(x, y);
+  }
+
+  private destroyItem(item: ItemView) {
+    for (const tween of item.motion) tween.stop();
+    this.tweens.killTweensOf(item.sprite);
+    item.sprite.destroy();
+    if (item.stamp) {
+      this.tweens.killTweensOf([item.stamp.g, item.stamp.text]);
+      item.stamp.g.destroy(); item.stamp.text.destroy();
+    }
   }
 
   // --- deliverables: pops, stamps (HC-F-083 / -085) -----------------------------
@@ -582,9 +636,7 @@ export class TownScene extends Phaser.Scene {
     const currentIds = new Set(current.map((item) => item.artifactId));
     for (const old of [...this.items]) {
       if (currentIds.has(old.artifactId) && old.artifactId !== artifactId) continue;
-      this.tweens.killTweensOf(old.sprite);
-      old.sprite.destroy();
-      if (old.stamp) { old.stamp.g.destroy(); old.stamp.text.destroy(); }
+      this.destroyItem(old);
       this.items.splice(this.items.indexOf(old), 1);
     }
     // Reconcile the surviving items with the same layout used after scrubbing.
@@ -607,7 +659,7 @@ export class TownScene extends Phaser.Scene {
     sprite.setDepth(DEPTH_TOP - 30);
     sprite.setInteractive({ useHandCursor: true });
     sprite.on('pointerdown', () => bridge.emit('openArtifact', { artifactId }));
-    const view: ItemView = { sprite, artifactId, kind, slot: slotIndex, landing: true, pendingStamp: false, stamp: null };
+    const view: ItemView = { sprite, artifactId, kind, slot: slotIndex, landing: true, pendingStamp: false, stamp: null, motion: [] };
     this.items.push(view);
     if (this.reduced) {
       sprite.setPosition(slot.x, slot.y);
@@ -616,11 +668,10 @@ export class TownScene extends Phaser.Scene {
       return;
     }
     const counter = { k: 0 };
-    const speed_ = this.speed;
-    this.tweens.add({
+    view.motion.push(this.tweens.add({
       targets: counter,
       k: 1,
-      duration: 600 / speed_,
+      duration: visualDuration(600, this.speed, 260),
       ease: 'Sine.easeInOut',
       onUpdate: () => {
         const k = counter.k;
@@ -632,10 +683,10 @@ export class TownScene extends Phaser.Scene {
       onComplete: () => {
         sprite.setPosition(slot.x, slot.y);
         const bounce = { h: 0 };
-        this.tweens.add({
+        view.motion.push(this.tweens.add({
           targets: bounce,
           h: 1,
-          duration: 150 / speed_,
+          duration: visualDuration(150, this.speed, 100),
           yoyo: true,
           ease: 'Sine.easeOut',
           onUpdate: () => sprite.setY(slot.y - 5 * Math.sin(Math.PI * bounce.h)),
@@ -648,9 +699,9 @@ export class TownScene extends Phaser.Scene {
               this.stampItem(artifactId, this.pendingVerdict(artifactId) ?? 'accept');
             }
           },
-        });
+        }));
       },
-    });
+    }));
   }
 
   private verdicts = new Map<string, 'accept' | 'revise'>();
@@ -670,7 +721,11 @@ export class TownScene extends Phaser.Scene {
   }
 
   private drawStamp(view: ItemView, verdict: 'accept' | 'revise', instant: boolean) {
-    if (view.stamp) { view.stamp.g.destroy(); view.stamp.text.destroy(); view.stamp = null; }
+    if (view.stamp?.verdict === verdict) return;
+    if (view.stamp) {
+      this.tweens.killTweensOf([view.stamp.g, view.stamp.text]);
+      view.stamp.g.destroy(); view.stamp.text.destroy(); view.stamp = null;
+    }
     const px = view.sprite.x;
     const py = view.sprite.y;
     const ok = verdict === 'accept';
@@ -687,20 +742,15 @@ export class TownScene extends Phaser.Scene {
     g.setRotation(-0.07);
     text.setRotation(-0.07);
     view.stamp = { verdict, g, text };
-    if (instant || this.reduced) return;
+    if (instant || this.reduced || this.speed > 4) return;
     g.setScale(1.6);
     text.setScale(1.6);
     this.tweens.add({
       targets: [g, text],
       scaleX: 1,
       scaleY: 1,
-      duration: 220 / this.speed,
+      duration: visualDuration(220, this.speed, 180),
       ease: 'Back.easeOut',
-      onComplete: () => {
-        this.time.delayedCall(60, () => {
-          if (!this.reduced) this.cameras.main.shake(60, 0.0016);
-        });
-      },
     });
   }
 
@@ -714,8 +764,8 @@ export class TownScene extends Phaser.Scene {
     sim.container.add(sprite);
     sprite.setInteractive({ useHandCursor: true });
     sprite.on('pointerdown', () => bridge.emit('openArtifact', { artifactId: carrying.artifactId }));
-    const bob = this.reduced ? null : this.tweens.add({
-      targets: sprite, y: { from: -19, to: -21 }, duration: 125 / this.speed, repeat: -1, yoyo: true,
+    const bob = this.reduced || this.speed > 4 ? null : this.tweens.add({
+      targets: sprite, y: { from: -19, to: -21 }, duration: 250, repeat: -1, yoyo: true,
     });
     this.carried.set(agent, { sprite, bob, artifactId: carrying.artifactId });
   }
@@ -756,7 +806,7 @@ export class TownScene extends Phaser.Scene {
     const tween = this.tweens.add({
       targets: counter,
       k: 1,
-      duration: 260 / this.speed,
+      duration: visualDuration(260, this.speed, 160),
       ease: 'Sine.easeIn',
       onUpdate: () => {
         sprite.setPosition(
@@ -768,6 +818,7 @@ export class TownScene extends Phaser.Scene {
       onComplete: () => {
         tween.stop();
         sprite.destroy();
+        this.flights = this.flights.filter((flight) => flight.sprite !== sprite);
         this.markReceived(building, carried.artifactId);
       },
     });
@@ -777,6 +828,9 @@ export class TownScene extends Phaser.Scene {
   /** The receiving building takes the envelope in (receive cue landed). */
   private markReceived(building: BuildingId, artifactId: string) {
     if (building === 'plaza') return;
+    const key = `${building}:${artifactId}`;
+    if (artifactId && this.received.has(key)) return;
+    if (artifactId) this.received.add(key);
     const point = tilePx(DOOR_ANCHORS[building as Exclude<BuildingId, 'plaza'>]);
     this.spawnPuff(point);
     void artifactId;
@@ -787,6 +841,8 @@ export class TownScene extends Phaser.Scene {
   setProgress(progress: number) {
     if (!Number.isFinite(progress) || progress === this.progress) return;
     this.progress = Math.max(0, Math.min(1, progress));
+    this.nightTween?.stop();
+    this.nightTween = null;
     if (this.reduced) this.setNightAlpha();
     else {
       const fromNight = this.nightAlpha;
@@ -794,7 +850,7 @@ export class TownScene extends Phaser.Scene {
       const targetNight = this.progress * 0.35;
       const targetLamp = this.progress > 0.7 ? 0.9 : 0;
       const counter = { n: fromNight, l: fromLamp };
-      this.tweens.add({
+      this.nightTween = this.tweens.add({
         targets: counter,
         n: targetNight,
         l: targetLamp,
@@ -815,6 +871,7 @@ export class TownScene extends Phaser.Scene {
   private celebrate(agents: readonly AgentId[]) {
     if (this.celebrating) return;
     this.celebrating = true;
+    this.celebrationAgents = agents;
     if (!this.reduced) {
       const spot = tilePx(PLAZA.center);
       const emitter = this.add.particles(spot.x, spot.y - 12, 'hc-dot', {
@@ -830,17 +887,21 @@ export class TownScene extends Phaser.Scene {
       emitter.setDepth(DEPTH_TOP - 40);
       emitter.explode(54);
       this.confetti = emitter;
-      this.time.delayedCall(1800, () => {
+      this.scheduleEffect(1800, () => {
         emitter.stop();
-        this.time.delayedCall(900, () => {
+        this.scheduleEffect(900, () => {
           emitter.destroy();
           if (this.confetti === emitter) this.confetti = null;
         });
       });
     }
-    for (const agent of agents) {
+  }
+
+  private settleCelebration() {
+    for (const agent of this.celebrationAgents) {
       const sim = this.sims.get(agent);
-      if (!sim || !sim.container.visible || this.reduced) continue;
+      if (!sim || !sim.container.visible || sim.job || sim.queue.length || this.reduced || this.celebrated.has(agent)) continue;
+      this.celebrated.add(agent);
       this.celebrateTweens.push(this.tweens.add({
         targets: sim.container, y: '-=4', duration: 230, yoyo: true, repeat: 3, ease: 'Quad.easeOut',
       }));
@@ -850,7 +911,17 @@ export class TownScene extends Phaser.Scene {
   // --- store plumbing ------------------------------------------------------------
 
   setSpeed(speed: number) {
-    if (Number.isFinite(speed) && speed > 0) this.speed = Math.max(0.25, Math.min(20, speed));
+    if (!Number.isFinite(speed) || speed <= 0) return;
+    this.speed = Math.max(0.25, Math.min(20, speed));
+    if (this.speed > 4) {
+      for (const fx of this.fx.values()) {
+        fx.glowTween?.stop();
+        fx.glow.setAlpha(fx.activeGlow ? 0.75 : 0);
+        fx.alertTween?.stop();
+        fx.alertText?.setScale(1);
+      }
+      for (const carried of this.carried.values()) { carried?.bob?.stop(); carried?.sprite.setY(-19); }
+    }
   }
 
   setReduced(reduced: boolean) {
@@ -900,6 +971,7 @@ export class TownScene extends Phaser.Scene {
     if (this.reduced) return;
     for (let i = 0; i < 3; i++) {
       const puff = this.add.circle(point.x, point.y - 4, 3, 0xffffff, 0.65);
+      this.puffs.add(puff);
       puff.setDepth(DEPTH_TOP - 35);
       this.tweens.add({
         targets: puff,
@@ -909,17 +981,21 @@ export class TownScene extends Phaser.Scene {
         alpha: 0,
         duration: 420 + i * 70,
         ease: 'Sine.easeOut',
-        onComplete: () => puff.destroy(),
+        onComplete: () => { this.puffs.delete(puff); puff.destroy(); },
       });
     }
   }
 
   update(_time: number, delta: number) {
     const dt = Math.min(delta, 66);
+    const statuses = this.syncSource().statuses;
     for (const [id, sim] of this.sims) {
       sim.update(dt, this.frozen, this.speed);
-      const ambient = id !== 'founder' && !this.celebrating && !this.frozen && !this.reduced;
+      const ambient = id !== 'founder' && statuses[id] === 'idle' && !sim.inside && !sim.job && !sim.queue.length
+        && this.speed <= 4 && !this.celebrating && !this.frozen && !this.reduced;
       sim.setWander(ambient);
     }
+    for (const bubble of this.bubbles) this.positionBubble(bubble);
+    if (this.celebrating && !this.frozen) this.settleCelebration();
   }
 }

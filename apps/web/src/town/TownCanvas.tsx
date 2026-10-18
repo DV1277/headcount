@@ -50,6 +50,7 @@ export function TownCanvas({ className }: TownCanvasProps) {
         reduced: current.reducedMotion,
         selected: current.selected,
         statuses: agentStatuses(),
+        title: current.state.title,
       };
     };
     const game = new Phaser.Game({
