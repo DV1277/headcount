@@ -1,11 +1,12 @@
 // Shared fetch helper: 15s timeout, uniform errors (status + first 200 chars of body).
 
 export class HttpError extends Error {
-  constructor(message, { status, body } = {}) {
+  constructor(message, { status, body, retryAfterMs } = {}) {
     super(message);
     this.name = "HttpError";
     this.status = status;
     this.body = body;
+    this.retryAfterMs = retryAfterMs;
   }
 }
 
@@ -61,9 +62,13 @@ export async function request(url, { method = "GET", headers = {}, json, body, t
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     const snippet = text.slice(0, 200);
+    const retryAfter = res.headers.get('retry-after');
+    const seconds = retryAfter === null ? NaN : Number(retryAfter);
+    const retryAfterMs = Number.isFinite(seconds) ? Math.max(0, seconds * 1000) : retryAfter ? Math.max(0, Date.parse(retryAfter) - Date.now()) : undefined;
     throw new HttpError(`${method} ${url} -> ${res.status}${snippet ? `: ${snippet}` : ""}`, {
       status: res.status,
       body: text,
+      retryAfterMs: Number.isFinite(retryAfterMs) ? retryAfterMs : undefined,
     });
   }
 

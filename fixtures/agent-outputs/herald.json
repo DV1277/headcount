@@ -1,0 +1,29 @@
+{
+  "posts": {
+    "x": "It's midnight at UCLA. Every boba counter is closed. Golden Boba delivers until 2am, single cups, dorm-door dropoff. First launch window: Friday 10pm. Waitlist open: __SITE_URL__",
+    "linkedin": "Late-night food access is a real operational gap around universities: Westwood counters close by 22:00 while study sessions run past 01:00. Golden Boba is a single-city delivery operation built around that gap: batch brewing every 30 minutes, dorm-route couriers, 15-minute pickup windows, single-cup orders without delivery-app minimums. We price inside the market band ($6.50–8.75 per drink) and open with a Friday 10pm launch window for the Hill dorms. If you work on campus operations or student housing, I would like to hear how food access looks from your side. __SITE_URL__",
+    "instagram": "1am study session, boba crisis? Not anymore 🧋 Golden Boba delivers to UCLA dorms until 2am — single cups, no minimums, no detours. Waitlist is open for launch night. #boba #ucla #westwood #latenighteats #studysnacks"
+  },
+  "emails": [
+    {
+      "persona": "Freshman dorm residents ordering individually",
+      "subject": "Boba, at your door, until 2am",
+      "body": "Hi! I run Golden Boba, a late-night tea delivery for the Hill dorms. We brew in 30-minute batches, walk your floor with a single-cup price of $6.50–$8.75, and post pickup windows at 15-minute precision. Competitors close by 10pm; we run until 2am. Want the launch-night menu? Reply and I will add you: __SITE_URL__"
+    },
+    {
+      "persona": "RCAs and floor council organizers",
+      "subject": "Floor-wide boba deal for your next study night",
+      "body": "Hi! Congrats on the floor role. For late-night study events, Golden Boba offers the floor pass: 5 shareable teas for $29, delivered inside one window, no per-cup minimum. It is priced against the Westwood band, so residents pay market or less. Reply with a date and headcount and we will schedule the run: __SITE_URL__"
+    },
+    {
+      "persona": "Student org social chairs",
+      "subject": "A boba bundle for your club event",
+      "body": "Hi! Student groups spend real budgets on snacks that arrive cold and late. Golden Boba delivers until 2am with batched dorm-routing, so a 21:00 order lands hot by 21:15. Club bundles start at 10 teas, invoiced with the org number. Menu and pricing: __SITE_URL__"
+    },
+    {
+      "persona": "Night-owl CS students in the dorm labs",
+      "subject": "The 1am boba crash is now a delivery slot",
+      "body": "Hi — you are debugging at 1am and every tea counter is long closed. Golden Boba runs couriers until 2am with single-cup pricing ($6.50 and up) and 15-minute door windows. Join the launch-night list and we will send the menu when the FIRST window opens: __SITE_URL__"
+    }
+  ]
+}

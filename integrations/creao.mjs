@@ -103,8 +103,13 @@ async function poll(fetchRun, runId, { intervalMs, timeoutMs, onTick, signal }) 
     }
     const run = await fetchRun();
     onTick?.(run);
-    if (TERMINAL.has(run?.status)) return run;
+    if (TERMINAL.has(String(run?.status).toLowerCase())) return run;
     if (Date.now() + intervalMs > deadline) throw new Error(`CREAO run ${runId} timed out after ${timeoutMs}ms (last status: ${run?.status})`);
-    await new Promise((r) => setTimeout(r, intervalMs));
+    await new Promise((resolve, reject) => {
+      const onAbort = () => { clearTimeout(timer); signal.removeEventListener('abort', onAbort); reject(new DOMException('CREAO polling aborted', 'AbortError')); };
+      const timer = setTimeout(() => { signal?.removeEventListener('abort', onAbort); resolve(); }, intervalMs);
+      signal?.addEventListener('abort', onAbort, { once: true });
+      if (signal?.aborted) onAbort();
+    });
   }
 }

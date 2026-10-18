@@ -1,0 +1,33 @@
+{
+  "competitors": [
+    {
+      "name": "Golden Boba Westwood",
+      "url": "https://example.com/golden-boba",
+      "priceNote": "$6.50–$8.75 per drink",
+      "notes": "Closes at 22:00; the gap we exploit is late-night delivery."
+    },
+    {
+      "name": "Pearl Counter UCLA",
+      "url": "https://example.org/pearl-counter",
+      "priceNote": "$5.95–$7.50 per drink",
+      "notes": "Walk-up counter only; no dorm delivery."
+    },
+    {
+      "name": "StudyTea Delivery",
+      "url": "https://example.net/studytea",
+      "priceNote": "$8 flat + $2 delivery",
+      "notes": "Delivers until 23:00 but has a $25 minimum order."
+    }
+  ],
+  "audience": "UCLA dorm residents in Westwood craving boba after 22:00, price-sensitive and phone-first.",
+  "priceBand": "$6–9 per drink",
+  "gaps": [
+    "No competitor delivers boba past 23:00 near campus.",
+    "Competitors lack single-cup orders with dorm-door dropoff."
+  ],
+  "sources": [
+    "https://example.com/golden-boba",
+    "https://example.org/pearl-counter",
+    "https://example.net/studytea"
+  ]
+}
