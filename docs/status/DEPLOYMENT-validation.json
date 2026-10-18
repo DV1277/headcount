@@ -1,0 +1,70 @@
+{
+  "checkedAt": "2026-10-18T17:34:26.105185+00:00",
+  "url": "https://headcount-1-demo.dv1277.workers.dev/demo",
+  "siteUrl": "https://headcount-1-demo.dv1277.workers.dev/sites/run_4hN7Q1M-b-/",
+  "workerVersion": "3b93c173-5fa8-4fa3-b3e8-7522a1e5f656",
+  "runtime": "Cloudflare Workers + Static Assets",
+  "recording": "live-boba-g2",
+  "tests": {
+    "passing": 223,
+    "files": 30,
+    "typecheck": "passed",
+    "secretScan": "passed",
+    "edgeDryRun": "passed"
+  },
+  "http": [
+    {
+      "path": "/",
+      "status": 200,
+      "bytes": 526
+    },
+    {
+      "path": "/demo",
+      "status": 200,
+      "bytes": 526,
+      "scriptStatus": 200,
+      "scriptPath": "/assets/index-Drgw99dK.js"
+    },
+    {
+      "path": "/demo/",
+      "status": 200,
+      "bytes": 526
+    },
+    {
+      "path": "/sites/run_4hN7Q1M-b-/",
+      "status": 200,
+      "bytes": 15125,
+      "sha256": "e442eea668660889c87d56375f7c91b0a68a68f8889a3d0c7ffaef38f58427cf",
+      "matchesSavedHtml": true,
+      "csp": "default-src 'none'; style-src 'unsafe-inline'; img-src data:; form-action mailto:; base-uri 'none'"
+    },
+    {
+      "path": "/api/health",
+      "status": 404,
+      "bytes": 80
+    },
+    {
+      "path": "/sites/missing/",
+      "status": 404,
+      "bytes": 74
+    },
+    {
+      "path": "/assets/missing.js",
+      "status": 404,
+      "bytes": 10
+    }
+  ],
+  "phoneCellular": "Not checked on this new Workers URL; earlier temporary URL passed founder check.",
+  "browser": {
+    "naturalGuidedPlayback": "Passed: prompt through 14/14 finale, recorded completed state and QR data image observed.",
+    "desktop": "Passed on latest deployment at 1790x982: 14/14 finale, all three accepted deliverables, full QR and Open site link visible.",
+    "phoneViewport": "Passed at 390x844: intro, plan, chapter navigation and final card; no horizontal overflow; QR fully visible within final card.",
+    "qrTarget": "https://headcount-1-demo.dv1277.workers.dev/sites/run_4hN7Q1M-b-/",
+    "applicationConsole": "No application errors captured during the final latest-deployment check.",
+    "generatedSite": "Direct public browser navigation passed; title Midnight Boba \u2014 Late-Night Boba to UCLA Dorms and headline visible.",
+    "screenshots": [
+      "img/Cloudflare-demo-final.jpg",
+      "img/Cloudflare-demo-mobile-final.jpg"
+    ]
+  }
+}

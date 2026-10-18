@@ -22,7 +22,7 @@ The official [Paper challenge page](https://paper.design/la-hacks) and [event ch
 ## Demonstration limits
 
 - Replay is a captured real execution and makes no sponsor calls. Live approval/pause/redirect are disabled during replay; use a separately labelled live run to demonstrate new actions.
-- The public QR page was checked HTTP 200 and previously confirmed by the founder on cellular within three seconds. It requires the current sites listener and tunnel; the bundled site viewer is the offline fallback.
+- The public QR page was checked HTTP 200 and previously confirmed by the founder on cellular within three seconds. The new Workers demo and generated site are hosted independently of the laptop/tunnel; the new URL is separately verified in `docs/status/DEPLOYMENT-validation.json`.
 - $0.055843 is reported StepFun usage. CREAO credit usage was not returned; it is not free and is excluded from the known total.
 - The waitlist form is a prototype and does not persist signups. Launch emails and posts are drafts only.
 - Browser Use, ElevenLabs, Devin and Workday are not entered as working integrations.

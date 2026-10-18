@@ -1,92 +1,122 @@
 # Headcount: 1
 
-> A company of one, staffed by AI agents you can watch.
+### A company of one, in good company.
 
-A pixel-art town where every resident is an AI agent doing real work for a solo founder. You type a business idea. The Mayor (StepFun Step 5 Preview) drafts a plan, you approve it, and department agents (saved CREAO agents) walk to their buildings, do the work, and hand results to each other. The output is real: market research, a live landing page, launch posts and outreach emails.
+Headcount: 1 turns a business idea into coordinated work you can follow. Approve a plan, watch your AI team research and build, and open the finished work from a town where every department has a place.
 
-**Status: G1 and G2 verified, including the founder's cellular phone check.** The animated town, editable approval gate, event-sourced executor, parallel departments, artifact viewers, sanitized site publisher and offline replay work end to end. Full mock smoke and 186 tests pass. The real run produced all three CREAO deliverables without covers. [Verification evidence](docs/status/G2-validation.json).
+**[Explore the interactive demo](https://headcount-1-demo.dv1277.workers.dev/demo)** · **[Open a generated site](https://headcount-1-demo.dv1277.workers.dev/sites/run_4hN7Q1M-b-/)** · **[Explore the design](https://app.paper.design/file/01M579A4RA58NP21Q5HRB94MVA/p-2-0)**
 
-Built for LA Hacks AI Hackathon 2026 (Applied Intelligence track). Authoritative product spec and build schedule: [docs/PRD.md](docs/PRD.md).
+![The Headcount town with completed research, a landing page, launch copy and a QR code](docs/status/img/Cloudflare-demo-final.jpg)
 
-## Sponsor tech
+## Your company at work
 
-| Sponsor | What we use | Role in Headcount: 1 | Proof |
-|---|---|---|---|
-| StepFun | `step-5-preview` via OpenAI-compatible API | Mayor / orchestrator: plans, reviews every deliverable, writes the final brief | [Captured real run](fixtures/runs/live-boba-g2.jsonl) |
-| CREAO | Saved agents, run via app API trigger | Scout (research), Maker (landing page), Herald (launch copy) workers | [Saved agents and verification](docs/status/CREAO.md) |
-| Paper — Best Designed Hack | Paper design file and exported art | Pixel town, shared design tokens, HUD and org chart | [Town design](https://app.paper.design/file/01M579A4RA58NP21Q5HRB94MVA/p-2-0), [HUD screens](https://app.paper.design/file/01M579A4RA58NP21Q5HRB94MVA/p-5-0), [verified design evidence](docs/status/PAPER-validation.json) |
+Give the Mayor an idea, such as “Late-night boba delivery for UCLA dorms.” Mabel prepares a plan with clear owners, instructions and dependencies. Edit the scope and approve it before work begins.
 
-Selected entries: **Applied Intelligence**, **CREAO Best One-Person Company**, **StepFun Get It Done with Step 5 Preview**, and **Paper Best Designed Hack**. Browser Use, ElevenLabs and Devin have client scaffolds only and are not claimed as working product integrations.
+Rio researches the market first. Once that research is ready, Juno builds the landing page and Pip prepares the launch copy in parallel. Envelopes carry the research between buildings; completed work arrives at City Hall for review. You can inspect each agent, pause execution, or redirect a department with a note.
 
-## Judge demo
+The finished workspace contains a research brief with source links, a generated landing page, social posts, outreach copy and a founder brief with next steps. Open the page directly or scan its QR code on another device.
 
-Open [the recorded real run at 20×](http://127.0.0.1:5173/?replay=fixture:live-boba-g2&speed=20). It reaches the final card in about 40 seconds. This is a recording of actual StepFun and CREAO execution; replay itself calls no sponsor APIs. The three other fixtures are illustrative.
+| Resident | Responsibility | Execution |
+|---|---|---|
+| Mabel, Mayor | Planning, deliverable review and the founder brief | StepFun `step-5-preview` |
+| Rio, Scout | Competitors, pricing, audiences and market gaps | Saved CREAO research agent |
+| Juno, Maker | A self-contained landing page informed by research | Saved CREAO website agent |
+| Pip, Herald | Social posts and outreach informed by research | Saved CREAO launch agent |
 
-If the web server is stopped, run `npm run demo`. It opens this recording on port 5173; the recording, fonts, town art, outputs and landing-page preview work without a backend or API keys. If port 5173 is already serving this checkout, use the link above instead.
+The founder controls the plan. Department agents do the work. The town makes ownership, dependencies and results visible throughout the process.
 
-After playback, close the final card and click **Org** to show the real Scout → Maker and Scout → Herald handoffs. Open each deliverable from the left shelf. Open **Founder brief** to return to the QR. [Three-minute pitch and click path](submission/pitch.md) · [Devpost draft](submission/devpost.md).
+## Explore a complete run
 
-The [generated landing page](https://subscriber-karma-assignments-lifestyle.trycloudflare.com/sites/run_4hN7Q1M-b-/) is also public and was verified on the founder's cellular phone. Its temporary URL needs this laptop's API/sites server and Cloudflare tunnel to stay running. The bundled site preview remains available if the tunnel or Wi-Fi fails. The generated waitlist is a prototype; it does not persist signups or send outreach.
+The [public demo](https://headcount-1-demo.dv1277.workers.dev/demo) follows a completed execution from the starting prompt to the final QR. It switches between the town, plan, agent inspectors, research, org chart, event log and finished outputs. Pause, skip chapters, restart, or explore the deliverables at your own pace.
 
-### CREAO agents
+The boba company completed three department tasks with two research handoffs and four revisions in 13 minutes, 12 seconds. Its recording contains 135 events and seven artifacts, including earlier versions. The guided tour takes about three minutes; 20× playback takes about 40 seconds.
 
-Primary integration: app API Trigger on `agent.creao.ai`, with server-side `capi_` keys. All three saved agents executed successfully. Shared-key request pacing and same-run polling backoff handle temporary rate limits. See [setup and execution evidence](docs/status/CREAO.md).
+The public experience replays actual StepFun and CREAO execution. Its recording, fonts, artwork and generated site are hosted together on Cloudflare Workers. Viewing the demo starts no new agent runs. New executions use the Node service described below.
 
-- [Scout (Rio)](https://agent.creao.ai/apps/dabe17eb-3f2c-40d9-bc8c-662f8736ddc1)
-- [Maker (Juno)](https://agent.creao.ai/apps/2430f36c-51b1-484e-9025-8cb37837f0d9)
-- [Herald (Pip)](https://agent.creao.ai/apps/bc76ea75-e5c8-4b83-a8b2-ff8722009881)
+## How it works
 
-## Quickstart
+The server executes a dependency graph after founder approval. StepFun handles the Mayor's decisions; CREAO runs the three saved department agents through API Trigger. Async status polling, request pacing and retry limits keep long-running work manageable. Polling retries continue observing the same external run, preventing duplicate dispatches.
 
-Requires Node 22.9 or newer.
+Every state change enters an append-only JSONL log. A shared reducer builds the current state, and a cue mapper translates those events into Phaser movement, speech, handoffs and review stamps. The live interface consumes a resumable server-sent event stream. Replay uses the same reducer, so seeking reconstructs the recorded state without making model calls.
 
-```bash
-npm install
-npm run dev         # http://127.0.0.1:5173 — choose a bundled fixture
-npm run typecheck
-npm test
-npm run smoke:foundation
-npm run build
+Generated HTML passes through an allowlist sanitizer and is served with a restrictive Content Security Policy. A separate site publisher keeps generated pages apart from the control API. Credentials remain on the server.
+
+| Layer | Technology |
+|---|---|
+| Interface | React, TypeScript, Vite, Zustand |
+| Town | Phaser, Paper artwork, Pixelify Sans, IBM Plex |
+| Execution | Node.js, Express, StepFun, CREAO |
+| Contracts and state | Zod, shared event schemas, pure reducer |
+| Site delivery | Sanitized HTML, QR codes, Cloudflare Workers Static Assets |
+
+## Run locally
+
+Requires Node.js 22.9 or newer.
+
+```sh
+npm ci
+npm run dev
 ```
 
-Open `http://127.0.0.1:5173/?replay=fixture:golden-boba&debug=1` to inspect the reducer during replay. `failure-retry` and `redirect` are also bundled. Fixture outputs and payroll are illustrative; no sponsor APIs are called. Fonts and town assets are local.
+Open **http://127.0.0.1:5173/demo** for the guided recording. It works without agent credentials or a running backend. `npm run demo` opens the faster 20× recording.
 
-The recording picker also includes **Real CREAO boba run** (`?replay=fixture:live-boba-g2`): 135 captured events, seven artifacts including superseded revisions, and bundled site HTML. Its outputs came from actual sponsor calls; replay itself makes no sponsor calls. CREAO did not report credits, so displayed costs include reported StepFun usage only.
+To start new companies, create a `.env` file in the repository root with the following configuration:
 
-Run the local mock backend in another terminal, then use the web app's idea entry and approval gate:
+| Variable | Value |
+|---|---|
+| `STEPFUN_API_KEY` | Your StepFun API key |
+| `STEPFUN_MODEL` | `step-5-preview` |
+| `CREAO_API_MODE` | `app` |
+| `CREAO_SCOUT_APP_ID` | Your saved research agent ID |
+| `CREAO_MAKER_APP_ID` | Your saved website agent ID |
+| `CREAO_HERALD_APP_ID` | Your saved launch agent ID |
+| `CREAO_SCOUT_APP_KEY` | Research agent's API Trigger key |
+| `CREAO_MAKER_APP_KEY` | Website agent's API Trigger key |
+| `CREAO_HERALD_APP_KEY` | Launch agent's API Trigger key |
+| `CREAO_APP_KEY` | Optional shared fallback, when the key is authorized for all three apps |
+| `PUBLIC_BASE_URL` | Public origin serving the site publisher, for links that open on other devices |
 
-```bash
-HC_MAYOR=mock HC_WORKERS=mock HC_MOCK_SPEED=10 npm run dev:server
-npm run smoke      # isolated API/SSE/worker/site integration check; no sponsor calls
+Start the backend in a second terminal with `npm run dev:server`, then open **http://127.0.0.1:5173/**. The control API listens on `127.0.0.1:8787`, and the site publisher listens on `127.0.0.1:8788`. Route public site traffic to the site publisher. Keep the control API private.
+
+### Agent workspaces
+
+The company uses a saved agent for each department:
+
+| Agent | Workspace | Agent ID |
+|---|---|---|
+| Scout, Rio | [Research](https://agent.creao.ai/apps/dabe17eb-3f2c-40d9-bc8c-662f8736ddc1) | `dabe17eb-3f2c-40d9-bc8c-662f8736ddc1` |
+| Maker, Juno | [Website](https://agent.creao.ai/apps/2430f36c-51b1-484e-9025-8cb37837f0d9) | `2430f36c-51b1-484e-9025-8cb37837f0d9` |
+| Herald, Pip | [Launch](https://agent.creao.ai/apps/bc76ea75-e5c8-4b83-a8b2-ff8722009881) | `bc76ea75-e5c8-4b83-a8b2-ff8722009881` |
+
+[View Rio's completed research run](https://agent.creao.ai/share/f998fa478beda09a6d774b969133e192), whose output feeds both downstream departments. Agent instructions and input contracts live in [the server's worker module](apps/server/src/workers).
+
+## Development and deployment
+
+```sh
+npm run typecheck       # TypeScript checks
+npm test                # 223 tests across contracts, execution, replay and hosting
+npm run smoke           # API, events, workers and site publishing with mock providers
+npm run scan:secrets     # Credential-pattern scan
+npm run build           # Web application
+npm run dev:edge        # Cloudflare demo preview on port 8790
+npm run deploy          # Build and publish the Cloudflare demo
 ```
 
-The control API listens on `127.0.0.1:8787`; the separate sites-only listener uses port `8788`. Tunnel only port 8788. Set `PUBLIC_BASE_URL` before starting a real run so Maker, Herald and the QR share one URL. `npm run record -- <runId> <new-recording-name>` exports a completed run for offline replay without overwriting fixtures. Restart the web dev server after adding a recording so its fixture list refreshes.
+The Cloudflare build hosts the recorded experience and its generated site. It does not host the live Node executor or receive agent credentials.
 
-`npm run verify:real -- <runId>` checks a completed real run and its public site without triggering agents. It rejects covers, missing handoffs and mismatched launch links; physical phone confirmation is recorded separately.
+| Directory | Contents |
+|---|---|
+| `apps/web` | Town, HUD, artifact viewers and guided replay |
+| `apps/server` | Approval flow, executor, provider adapters and site publisher |
+| `apps/edge` | Cloudflare Worker and public routing |
+| `packages/contracts` | Shared event, plan and artifact schemas |
+| `packages/engine` | State reducer and animation cues |
+| `fixtures/runs` | Recordings, artifact payloads and generated HTML |
 
-For live runs, configure credentials locally:
+## Design and data
 
-```bash
-npm run keys        # paste each API key; input is hidden; writes .env
-npm run check       # verifies every configured key
-npm run check:deep  # same, plus one real Step 5 call
-```
+The [Paper town](https://app.paper.design/file/01M579A4RA58NP21Q5HRB94MVA/p-2-0) and [HUD designs](https://app.paper.design/file/01M579A4RA58NP21Q5HRB94MVA/p-5-0) define the visual system. Exported artwork is assembled by [the asset build script](scripts/build-town-assets.py). Kenney CC0 assets provide the pixel-art foundation.
 
-Sponsor details and perks: [docs/SPONSORS.md](docs/SPONSORS.md).
+Research includes source links for review. Outreach copy is available to inspect and copy; the system does not send it automatically. The example site's signup form opens an email client and does not store submissions. Usage displays distinguish reported model costs from unavailable CREAO credit totals.
 
-## Repo layout
-
-```
-docs/PRD.md             authoritative product spec, contracts and build schedule
-CLAUDE.md               notes for coding agents
-docs/SPONSORS.md        sponsor perks and judging criteria
-integrations/           one module per sponsor API (stepfun, creao, browser-use,
-                        devin, elevenlabs) plus index.mjs and shared _http.mjs
-scripts/setup-keys.mjs  interactive key entry
-scripts/check-keys.mjs  key verification
-.env.example            required environment variables
-```
-
-## Security
-
-API keys live only in local `.env` files, which are gitignored. This checkout also excludes `.env.example`. All sponsor calls happen server-side; the browser never sees a key and never calls an agent directly.
+Keep `.env` files and API keys out of source control. Agent requests run through the backend; the browser renders events and artifacts.

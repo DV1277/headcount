@@ -1,71 +1,88 @@
 # Headcount: 1
 
-**Tagline:** A company of one, staffed by AI agents you can watch.
+## Elevator pitch
 
-**Main track:** Applied Intelligence.
-**Sponsor entries:** CREAO Best One-Person Company; StepFun Get It Done with Step 5 Preview; Paper Best Designed Hack.
+Run your company from a town of AI agents. Approve the plan, follow the handoffs, and open the finished work.
 
 ## Inspiration
 
-A solo founder can delegate to agents, but following their progress across chat tabs is difficult. I wanted a company whose work I could understand at a glance: who owns a task, what they are waiting for, and what they have delivered.
+A solo founder has to switch between research, product, marketing and management. Giving those jobs to agents creates another job: keeping track of what each agent knows, what it is waiting for, and whether the result is useful.
+
+I wanted to see that work happen in one place. A town gave each department a home, each handoff a visible route, and each deliverable somewhere to arrive. The founder could stay involved through decisions instead of supervising every message.
 
 ## What it does
 
-Type a business idea. Mayor Mabel, powered by StepFun `step-5-preview`, drafts a structured plan. The founder edits and approves it. Three saved CREAO agents then do the core work: Scout Rio researches competitors, Maker Juno builds a landing-page prototype, and Herald Pip writes social posts and outreach drafts.
+Headcount: 1 turns a business idea into a coordinated company workflow. Mayor Mabel drafts a structured plan. The founder can edit the tasks, change the instructions and approve the scope before execution begins.
 
-The interface is a pixel town. Agents enter their department buildings, carry research between departments and deliver artifacts for review. Every movement derives from an append-only semantic event log. An org chart shows assignments and handoffs, while the artifact viewers expose the actual research, site and launch copy.
+Scout Rio researches the market. Once that research is accepted, Maker Juno builds a landing page and Herald Pip writes the launch copy in parallel. The Mayor reviews submissions, requests corrections and prepares the founder's final brief. The founder can inspect agents, pause the workflow or redirect a department with a note.
 
-The verified boba-delivery run produced three accepted CREAO outputs, four competitor records, eight source links, a sanitized public landing page, three social posts, three outreach emails and a StepFun founder brief. Maker and Herald worked in parallel after Scout. It took 13m 12s and is bundled as a 135-event recording that replays in about 40 seconds at 20×. Replay makes no sponsor calls.
+The interface is a pixel-art town. Agents enter their buildings, carry research to other departments and bring completed work to City Hall. An org chart reveals the dependencies behind those movements. Artifact viewers expose the research, source links, website and launch copy. The final card includes a QR code for the generated site.
+
+For the completed UCLA boba-delivery company, the agents produced four competitor records with eight source links, a landing page, three social posts, three outreach emails and a founder brief. Three department tasks finished with two research handoffs and four revisions. The 13-minute, 12-second execution is saved as 135 events with seven artifacts, including superseded versions.
 
 ## How I built it
 
-The Node/Express TypeScript server runs a dependency-aware executor with an approval gate, bounded retries, one Mayor review per task, labelled failure fallbacks and usage accounting. It appends events to JSONL and streams them through resumable SSE. A separate sites-only listener serves sanitized generated HTML with a restrictive CSP.
+StepFun `step-5-preview` powers the Mayor's planning, review and final synthesis. Three saved CREAO agents do the research, website and launch work through app-scoped API Trigger calls. CREAO supplies the department outputs that the rest of the workflow consumes.
 
-The Mayor adapter calls StepFun Step 5 Preview for plans, reviews, final briefs and repair paths. Department adapters call three saved CREAO apps through the app API Trigger, with shared-key pacing and same-run polling backoff. Keys remain server-side.
+The TypeScript backend runs a dependency graph behind an explicit approval gate. Scout completes the shared research dependency before Maker and Herald begin independently. The executor tracks each dispatch and result, limits retries, preserves revisions and records reported usage. Rate-limit recovery polls the same external run rather than creating duplicate work. All credentials stay server-side.
 
-React, Vite, Zustand and Phaser render the town and controls. A pure reducer and cue mapper drive both live execution and replay. The existing Headcount Paper design contains foundations, town scenes, workers/items, components and HUD screens. Its exported town art is assembled into the app by `scripts/build-town-assets.py`. The visual system uses Pixelify Sans and IBM Plex, agent identity colors and Kenney CC0 base assets with custom signs, items and layout.
+Each change is appended to a JSONL event log and delivered through resumable server-sent events. React and Zustand render the controls; Phaser renders the town. A shared pure reducer reconstructs state from the log, and a cue mapper turns semantic events into movement, speech, envelopes and review stamps. This also makes replay and seeking possible without calling the models again.
 
-## Challenges
+I designed the town and HUD in Paper, including the department buildings, plan scroll, agent inspectors, org chart and final card. Exported artwork combines with Kenney CC0 base assets, Pixelify Sans and IBM Plex. Ownership has a consistent color; task status also has a word and icon.
 
-CREAO sometimes returns a short form summary alongside the full JSON result, so parsing must prefer the complete chat output. Shared trigger keys can also hit rate limits; polling now backs off on the same external run instead of creating duplicate work.
+Generated HTML passes through an allowlist sanitizer. A separate publisher serves it with a restrictive Content Security Policy. The public experience and accepted site run on Cloudflare Workers with static assets. The guided demo replays the completed real execution and changes HUD views at recorded milestones. New executions use the configured Node backend.
 
-Revisions must remain visible without misleading the founder about the current accepted result. Superseded artifacts stay in the saved history, while the town displays current deliverables. A validated revision is accepted without asking the Mayor for a second review.
+## Challenges I ran into
 
-## Accomplishments
+The department runs take minutes, and the CREAO app-trigger path reports status without streaming tokens. I had to make waiting understandable through task ownership, dependencies and observed progress. The interface follows the status updates returned by the execution service.
 
-- Real StepFun model plan and edited founder approval.
-- Three accepted CREAO department outputs, with no task failures or Mayor covers in the verified run.
-- Two research handoffs and parallel Maker/Herald execution.
-- Public generated page confirmed on cellular within three seconds.
-- Bundled real-run replay, artifact payloads and offline site preview.
-- Paper town and HUD designs verified through the local Paper Desktop MCP.
-- Automated tests, typecheck, build, mock smoke and real-run verification; current evidence is linked below.
+Results can contain a short form summary alongside a fuller conversational response. Parsing the wrong field discards the useful output. The adapter now prefers the complete result, validates its structure and carries review feedback into the next dispatch.
+
+Replay exposed a different class of problems. Compressing execution time by 20× made short animations blink and allowed interrupted effects to leave ghosts behind. I separated visible animation timing from the event clock, canceled effects when seeking and prevented overlapping movement animations. Long task titles and URLs also needed measured text fitting and responsive layouts.
+
+## Accomplishments that I'm proud of
+
+- A real idea-to-output execution using StepFun and three saved CREAO agents, with all three department tasks accepted and no fallback covers in the recorded run.
+- Research handed to both downstream departments, followed by parallel website and launch work.
+- Founder approval, agent inspection, pause and redirect controls around an explicit execution model.
+- A generated public site and a final QR that remains fully visible on a phone-sized screen.
+- A complete recording that can be paused, scrubbed and replayed with its original artifacts.
+- A working Cloudflare deployment, 223 passing tests, and a town whose actions follow the underlying event log.
 
 ## What I learned
 
-Readable agent workflows need explicit ownership, dependencies and approval boundaries. Honest telemetry also matters: CREAO did not return credit usage, so the UI discloses that the roughly $0.06 shown is reported StepFun usage, not total sponsor billing.
+An agent's role needs an input contract, an owner and a clear definition of completion. Those details determine whether another agent can use its result. The same structure also gives the founder a way to understand and intervene in the work.
 
-## What's next
+Designing the town alongside the executor forced me to define what each movement means. An envelope represents a real artifact handoff. A stamp follows an accepted result. Seeking rebuilds the recorded state. The visual model became a useful way to check the execution model.
 
-Persistent waitlist capture, scheduling, custom departments, shareable run recordings and fuller billing telemetry.
+## What's next for Headcount: 1
+
+Persistent lead capture, configurable departments and reusable company workflows would let a founder continue from the initial launch package. I also want fuller usage reporting, shareable recordings for new runs and recurring workflows that return to the founder for consequential decisions.
 
 ## Built with
 
-StepFun Step 5 Preview, CREAO saved agents, Paper, TypeScript, React, Phaser, Express, Vite, Zustand, Zod, sanitize-html, QR code generation and Kenney CC0 assets.
+TypeScript, React, Phaser, Vite, Zustand, Node.js, Express, Zod, StepFun Step 5 Preview, CREAO, Paper, Cloudflare Workers, sanitize-html, qrcode, Pixelify Sans, IBM Plex and Kenney CC0 assets.
 
-## Links
+## How it fits the selected challenges
 
-- Public repository: https://github.com/DV1277/headcount — push the final local implementation before submission.
-- Paper town: https://app.paper.design/file/01M579A4RA58NP21Q5HRB94MVA/p-2-0
-- Paper HUD: https://app.paper.design/file/01M579A4RA58NP21Q5HRB94MVA/p-5-0
-- CREAO agents and execution: `docs/status/CREAO.md` and README agent links.
-- Real-run verification: `docs/status/G2-validation.json`.
-- Design verification: `docs/status/PAPER-validation.json`.
-- Replay: `fixtures/runs/live-boba-g2.jsonl`, companion artifacts JSON and site HTML.
-- Demo video: **add the final 2–3 minute video URL before submitting**.
+**Applied Intelligence:** A practical workflow for a solo founder, taking an approved business idea through research, site creation and launch preparation with inspectable outputs.
 
-## Prototype limits
+**CREAO Best One-Person Company:** Three saved role agents perform the core department work. The org chart shows research handed from Scout to Maker and Herald. The company is coordinated through API Trigger by an external executor.
 
-The landing-page signup form does not persist submissions. Outreach is drafted, not sent. Recorded research is AI-generated and should be checked before business decisions. The Cloudflare page URL is temporary and depends on the laptop/tunnel. A fresh live run requires configured StepFun and CREAO credentials; bundled replay does not.
+**StepFun Get It Done with Step 5 Preview:** The live workflow calls `step-5-preview` for the Mayor's decisions. StepFun plans and reviews; CREAO executes the departments. Approval, inspection, pause and redirect make the workflow understandable and controllable.
 
-Browser Use, ElevenLabs, Devin and Workday are not claimed as product integrations for this submission.
+**Paper Best Designed Hack:** The town and HUD share a Paper-designed visual system, with department identities, readable status treatments, responsive panels and a consistent relationship between work and movement.
+
+## Project links
+
+- [Interactive end-to-end demo](https://headcount-1-demo.dv1277.workers.dev/demo)
+- [Generated boba landing page](https://headcount-1-demo.dv1277.workers.dev/sites/run_4hN7Q1M-b-/)
+- [Source code](https://github.com/DV1277/headcount)
+- [Paper town design](https://app.paper.design/file/01M579A4RA58NP21Q5HRB94MVA/p-2-0)
+- [Paper HUD design](https://app.paper.design/file/01M579A4RA58NP21Q5HRB94MVA/p-5-0)
+- [Scout's completed CREAO research run](https://agent.creao.ai/share/f998fa478beda09a6d774b969133e192), agent ID `dabe17eb-3f2c-40d9-bc8c-662f8736ddc1`
+- [Saved Scout agent](https://agent.creao.ai/apps/dabe17eb-3f2c-40d9-bc8c-662f8736ddc1)
+- [Saved Maker agent](https://agent.creao.ai/apps/2430f36c-51b1-484e-9025-8cb37837f0d9), ID `2430f36c-51b1-484e-9025-8cb37837f0d9`
+- [Saved Herald agent](https://agent.creao.ai/apps/bc76ea75-e5c8-4b83-a8b2-ff8722009881), ID `bc76ea75-e5c8-4b83-a8b2-ff8722009881`
+
+The public demo is a recording of actual provider execution. The example signup form opens an email client without storing entries; outreach is prepared for founder review and is not sent automatically. Displayed cost is reported StepFun usage, approximately $0.06 for this run; CREAO did not return credit usage.

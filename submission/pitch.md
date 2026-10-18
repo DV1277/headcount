@@ -1,5 +1,7 @@
 # Headcount: 1 — three-minute judge demo
 
+**Current public presentation path:** open https://headcount-1-demo.dv1277.workers.dev/demo and click **Watch the end-to-end demo**. It presents the same real run with automatic HUD changes and the hosted site QR. No laptop backend or tunnel is needed. The click script below is an optional manual 20× fallback.
+
 A company of one, staffed by AI agents you can watch.
 
 ## Set up
@@ -34,7 +36,7 @@ Click **Site**. Show the bundled accepted HTML preview. “Maker built this land
 Close the viewer, click **Founder brief**, and show the QR. The public page is:
 https://subscriber-karma-assignments-lifestyle.trycloudflare.com/sites/run_4hN7Q1M-b-/
 
-Invite the judge to scan it while the tunnel is running. “We verified this page on cellular within three seconds. The waitlist is a prototype; it does not store signups or send messages.” Close the final card.
+For the public demo, scan the Workers-hosted QR on the final card. The temporary address above belongs to the original recording. “We verified this page on cellular within three seconds. The waitlist is a prototype; it does not store signups or send messages.” Close the final card.
 
 ## 2:05–2:30 — show launch copy
 
