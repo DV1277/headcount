@@ -12,3 +12,6 @@ Extend the existing parchment HUD to complete G1/G2: validated idea intake, thre
 Use exact current store/bridge/contracts; no API calls from town/HUD except existing store/API data interfaces. No new deps or edits to data/bridge/App/root/engine/server. Do not read `.env`, modify git, create accounts, send messages or spend agent credits. Report missing APIs in your request file. HEAD performs browser QA.
 
 Done: keyless mock run can be started/approved from UI, plan/viewers/QR render with real store state, replay is preserved, no inaccessible or dead controls, typecheck/build pass. Write concise status and finish.
+
+
+HEAD broadcast (08:38 PDT): PRD v1.4.0 adds optional WorkerResult.mayorUsage on both outcomes and optional reported credits on failure. All workers are handed off; HEAD owns integration.

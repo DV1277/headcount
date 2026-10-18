@@ -1,0 +1,26 @@
+{
+  "checkedAt": "2026-10-18T16:33:17.634927+00:00",
+  "source": "Read-only local Paper Desktop MCP",
+  "fileName": "Headcount",
+  "townUrl": "https://app.paper.design/file/01M579A4RA58NP21Q5HRB94MVA/p-2-0",
+  "hudUrl": "https://app.paper.design/file/01M579A4RA58NP21Q5HRB94MVA/p-5-0",
+  "townArtboards": [
+    "Town \u2014 Morning (idle)",
+    "Town \u2014 Running",
+    "Town \u2014 Evening (complete)",
+    "Town \u2014 Failure detail (Workshop)"
+  ],
+  "hudArtboards": [
+    "Morning \u2014 command bar",
+    "Plan scroll",
+    "Running \u2014 inspector open",
+    "Founder needed",
+    "Completed \u2014 final card",
+    "Org chart"
+  ],
+  "exportAssembly": "scripts/build-town-assets.py",
+  "exportDirectory": "apps/web/public/assets/town",
+  "publicAccessVerified": false,
+  "criteriaSource": "https://paper.design/la-hacks",
+  "criteriaChecked": "Design fundamentals, ease of use, personal craft and character. Published challenge text does not explicitly require use of Paper software. Existing design file and exports were independently confirmed."
+}

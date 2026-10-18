@@ -10,3 +10,4 @@ out/
 runs/
 !fixtures/runs/
 .impeccable/review/
+.commandcode/

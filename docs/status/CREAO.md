@@ -1,3 +1,13 @@
+# Execution verified — 2026-10-18 09:09 PDT
+
+All three saved app agents executed successfully in run_4hN7Q1M-b-. Their accepted research/site/launch-kit outputs came from CREAO, with no Mayor cover. Shared-key pacing and same-run polling recovery are integrated. CREAO did not report credits; no zero-cost claim is made.
+
+[Observed external run IDs and gate evidence](G2-validation.json) · [Complete handoff](HEAD-INTEGRATION.md). Founder confirmed the generated public site works on cellular within 3 seconds. Existing app-trigger credentials are sufficient; no developer Account key is needed.
+
+The setup record below is historical; its pending-execution paragraph is superseded.
+
+---
+
 # Saved CREAO agents
 
 The founder chose the app platform, `agent.creao.ai`, and app-scoped API Trigger. No developer Account key is required. The existing `capi_` key authenticated read-only run-list requests for all three saved apps (HTTP 200); StepFun `/models` returned HTTP 200 and listed `step-5-preview`.

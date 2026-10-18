@@ -1,9 +1,9 @@
 # Headcount: 1 — Product Requirements Document
 
 <!--meta
-version: 1.3.0
+version: 1.4.0
 status: Baselined · H0 (hackathon release) in build
-updated: 2026-10-18 03:50 PDT
+updated: 2026-10-18 09:09 PDT
 cycle: Re-baselined at every integration gate (§17.2)
 platform: Desktop web (Chrome/Safari, 1280–2560 px). Node 22 (≥ 22.9) server. Mobile is view-only for published sites.
 -->
@@ -22,10 +22,10 @@ platform: Desktop web (Chrome/Safari, 1280–2560 px). Node 22 (≥ 22.9) server
 | Product | Headcount: 1 |
 | One-liner | A company of one, staffed by AI agents you can watch. |
 | Elevator pitch | Type a business idea. A Mayor agent (StepFun Step 5 Preview) drafts a plan, you approve it, and a town of department agents (saved CREAO agents) walk to their buildings, do the work, and hand real deliverables to each other: market research, a live landing page and a launch kit. |
-| Document version | 1.3.0 |
+| Document version | 1.4.0 |
 | Status | Baselined for H0 · H0 in build |
 | Document owner | Dhairya Vashist |
-| Last updated | 2026-10-18 03:50 PDT |
+| Last updated | 2026-10-18 09:09 PDT |
 | Event | LA Hacks AI Hackathon 2026 · James West Alumni Center, UCLA · Oct 17–18 |
 | Hard deadlines | **Feature freeze 09:15** · **Devpost submitted 11:45** · **Code freeze 12:00 PDT** (event rule: no code after 12:00) |
 | Judging | 12:30–14:00 table expo (4–5 min per judge) · 14:00–15:00 top-5 stage (3 min pitch + 5 min Q&A) |
@@ -70,6 +70,7 @@ Speed matters tonight, so the process is short. It is still a process.
 
 | Version | Date | Change |
 |---|---|---|
+| 1.4.0 | 2026-10-18 08:36 | HEAD-approved additive WorkerResult accounting contract: optional Mayor repair usage on either outcome and optional reported credits on failure. Preserve reported spend even when parsing fails. Clarify shared-key polling/backoff and full chat output selection after real app responses. G1 verified by full mock smoke/browser flow; G2 real run, public site, offline capture and founder cellular phone check verified. |
 | 1.3.0 | 2026-10-18 03:50 | Founder expanded scope to G1/G2 and selected five GLM-5.3-Flash Free Max headless workers. Founder requires agent.creao.ai app-trigger mode as primary (ADR-017); account realtime mode is optional only. App progress must describe observed run status, with no invented tool activity. Extend ADR-016 exclusive ownership through G1/G2 while main is unborn. |
 | 1.2.0 | 2026-10-18 03:15 | G-1/G0 implementation: expose recording clock/state controls in the web Store contract (§8.6); document the initial-checkout concurrency exception (ADR-016). Foundation validation uses `smoke:foundation`; the G1 runtime smoke remains a later task. Scope confirmed by founder: complete the first two build phases. |
 | 1.1.0 | 2026-10-18 03:00 | Review pass (3 parallel reviewers). Gates re-timed to fit task-card durations (G0 04:15, G1 06:15, G2 07:45, G3 08:45, freeze 09:15). Contracts: added RunStatus/TaskStatus/LogLine/Subscribe, `task.skipped`, `run.finishing`, `receive` cue, canonical event order (§8.4.1), store/bridge additions, `/replan`, artifact fixtures for offline replay. CREAO facts corrected (search events, no cancel API, $0.10–0.15/credit). StepFun facts (reasoning_effort, cached_tokens, cache price $0.10/M). Workspace reconciled: Node 22, root `.env`, existing `integrations/*.mjs` clients reused (no openai SDK), env var names. Sites served on a separate port for the tunnel; sanitize allowlist and CSP fixed for mailto forms. |
@@ -187,7 +188,7 @@ Tiers are scoped to **H0, the hackathon release (Devpost submission, 11:45 PDT O
 | HC-F-021 | Plan validation, single repair attempt and deterministic template fallback | E02 |
 | HC-F-022 | Plan approval gate: nothing executes before the founder approves | E02 |
 | HC-F-040 | Three saved CREAO department agents (Scout, Maker, Herald) do the core work | E03 |
-| HC-F-041 | Primary worker path is the founder-selected **app-scoped API Trigger** on `agent.creao.ai`: `POST /api/v1/apps/{appId}/runs` with `{inputs}`; parse response `id`, poll the same path plus `/{id}` every 3 s. Emit `task.started` for the observed external run, truthful status-only `agent.progress` while pending/running, and result/failure on terminal status. No streaming tools/searches may be invented. Per-role app IDs and capi_ key overrides are supported, with the existing shared app-trigger key used only where CREAO authorizes it. Optional `CREAO_API_MODE=account` retains realtime NDJSON mapping (`run.created`, `tool.*`, `search.*`, `output_text.delta`, `artifact.created`, terminal events) and async account fallback. | MUST | Accepted |
+| HC-F-041 | Primary worker path is the founder-selected **app-scoped API Trigger** on `agent.creao.ai`: `POST /api/v1/apps/{appId}/runs` with `{inputs}`; parse response `id`, poll the same path plus `/{id}` at a target 3 s cadence. Shared trigger keys pace requests across apps; transient 429/5xx or transport failures back off while polling the same external run, respecting Retry-After when provided. A failed status read must not create another run. Emit `task.started` for the observed external run, truthful status-only `agent.progress` while pending/running, and result/failure on terminal status. No streaming tools/searches may be invented. Per-role app IDs and capi_ key overrides are supported, with the existing shared app-trigger key used only where CREAO authorizes it. Optional `CREAO_API_MODE=account` retains realtime NDJSON mapping (`run.created`, `tool.*`, `search.*`, `output_text.delta`, `artifact.created`, terminal events) and async account fallback. | MUST | Accepted |
 | HC-F-042 | DAG executor: parallel dispatch of ready tasks, dependency inputs, timeout, one retry | E03 |
 | HC-F-043 | Structured output parsing per role with schema validation and one repair attempt | E03 |
 | HC-F-060 | Handoff events: dependency artifacts physically carried between buildings | E04 |
@@ -322,7 +323,7 @@ Each epic states its intent, then lists requirements and acceptance criteria. `A
 | ID | Requirement | Tier | State |
 |---|---|---|---|
 | HC-F-040 | Three saved CREAO agents: **Scout** (research), **Maker** (landing page), **Herald** (launch kit). Their instructions live in `agents/creao/*.md` and are pasted into CREAO verbatim when the agents are created. The README links each one. | MUST | Accepted |
-| HC-F-041 | `CreaoWorker` calls the CREAO realtime run endpoint and maps NDJSON events to `WorkerEvent`s, which become town events: `run.created → task.started`, `tool.started{tool,title} → agent.tool` (label = `title`), `search.started{query} → agent.tool` (label = `Searching: <query>`; CREAO sends web searches as `search.*`, never as `tool.*`), `output_text.delta → agent.progress` (throttled to 1/s, text not shown), `artifact.created → agent.progress`, `run.completed → result`, and `run.failed`/`error → failure`. `ping`, `thinking.*`, `todo.updated` and unknown types are ignored. **Fallback:** async `POST /v1/runs`, then poll every 3 s, with synthetic `agent.progress` heartbeats every 10 s. | MUST | Accepted |
+| HC-F-041 | Primary app mode uses the app trigger and same-run polling described in §4/HC-F-041, preferring the full result.chatText over form-summary result.text. The following telemetry applies only to optional Account mode: `CreaoWorker` calls the CREAO realtime run endpoint and maps NDJSON events to `WorkerEvent`s, which become town events: `run.created → task.started`, `tool.started{tool,title} → agent.tool` (label = `title`), `search.started{query} → agent.tool` (label = `Searching: <query>`; CREAO sends web searches as `search.*`, never as `tool.*`), `output_text.delta → agent.progress` (throttled to 1/s, text not shown), `artifact.created → agent.progress`, `run.completed → result`, and `run.failed`/`error → failure`. `ping`, `thinking.*`, `todo.updated` and unknown types are ignored. **Fallback:** async `POST /v1/runs`, then poll every 3 s, with synthetic `agent.progress` heartbeats every 10 s. | MUST | Accepted |
 | HC-F-042 | DAG executor. Dispatches every task whose dependencies are `accepted` or `skipped`, in parallel (a skipped dependency simply contributes no input). The input to each task includes its dependencies' artifact payloads (§11.3). Per-attempt timeout is 6 min (`HC_TASK_TIMEOUT_MS`), covering any A→B rung switch inside that attempt; one retry on a retryable failure (§11.5). Pause stops new dispatches; in-flight tasks finish and their results are held until resume. | MUST | Accepted |
 | HC-F-043 | Output parsing. Take the **last** fenced ```json block from the agent output, then validate it against the role schema (§8.3). On failure, make one Step 5 repair call with the raw text and the schema. If that also fails, the task fails with `error.code = "unparseable"`. | MUST | Accepted |
 | HC-F-044 | Ledger department (pricing tiers and a 90-day budget), with a Bank building. | COULD | Accepted |
@@ -834,8 +835,8 @@ export function createMayor(): Mayor;            // 'mock' | 'stepfun' by HC_MAY
 export type WorkerInput = { runId: string; task: PlanTask; idea: string; inputs: Artifact[]; founderNotes: string[]; siteUrl: string };
 export type WorkerEvent = { kind: 'started'; externalRunId?: string } | { kind: 'tool'; tool: string; label: string } | { kind: 'progress'; note: string };
 export type WorkerResult =
-  | { ok: true; payload: ResearchPayload | SitePayload | LaunchKitPayload; credits: number | null; raw: string; via: 'creao-realtime' | 'creao-async' | 'mock' }
-  | { ok: false; error: { code: ErrorCode; message: string }; retryable: boolean };
+  | { ok: true; payload: ResearchPayload | SitePayload | LaunchKitPayload; credits: number | null; raw: string; via: 'creao-realtime' | 'creao-async' | 'mock'; mayorUsage?: Usage }
+  | { ok: false; error: { code: ErrorCode; message: string }; retryable: boolean; credits?: number | null; mayorUsage?: Usage };
 export interface Worker { run(i: WorkerInput, onEvent: (e: WorkerEvent) => void, signal: AbortSignal): Promise<WorkerResult> }
 export function getWorker(agent: DeptId): Worker;  // 'mock' | 'creao' by HC_WORKERS
 ```
@@ -1244,7 +1245,7 @@ Each agent is created at agent.creao.ai by pasting the instruction file, testing
 | Rung | Mechanism | UI label | Trigger to next rung |
 |---|---|---|---|
 | A (optional) | Account realtime run, only when explicitly selected | — | Stream error, or no event for 90 s |
-| B (primary) | Saved app API Trigger + poll every 3 s (account async only in account mode) | "Running (async)" | `failed`, or timeout at 6 min |
+| B (primary) | Saved app API Trigger + target 3 s polls, shared-key pacing and transient backoff (account async only in account mode) | "Running (async)" | `failed`, or timeout at 6 min |
 | Retry | Attempt 2 reuses the last rung that worked. The 6-min timeout covers one attempt including any A→B switch; worst case about 12 min before rung C. | "Retrying once" | Second failure |
 | C | **Mayor covers the shift**: Step 5 produces the payload directly | "Covered by Mayor" (amber badge) | Invalid output |
 | D | Skip the task; dependents get `inputs` without it | "Skipped: <reason>" | — |
@@ -1510,6 +1511,8 @@ Each orchestrator may run several sub-agents in parallel inside its workstream, 
 | **G4 Feature freeze** | 09:15 | Bug fixes only after this. Record the golden "overnight" run. |
 | **G5 Submitted** | 11:45 | Devpost complete; repo public; video uploaded; secrets scan green |
 | Code freeze | 12:00 | Event rule |
+
+**Verified gate evidence (2026-10-18):** G1 passed the full mock API/SSE/sites smoke and live browser flow. G2 passed on `run_4hN7Q1M-b-`: real Step 5 model plan, approval, all three real CREAO departments (no task failures or covers), four researched competitors/eight sources, parallel Maker/Herald, 135 events, seven artifacts including revisions, sanitized public site, exact launch URLs. Founder confirmed cellular phone load within three seconds at 09:05 PDT. See `docs/status/G2-validation.json`; replay is `fixture:live-boba-g2`. G3–G5 are not claimed by this G1/G2 gate.
 
 Human tasks in parallel with G-1/G0 (founder, ~35 min): **H-01** StepFun key · **H-02** CREAO signup via the hackathon link, create the 3 agents from `agents/creao/*.md` (O4 delivers these by 03:20), app-trigger key · **H-03** install cloudflared · **H-04** confirm Devin access (Q-004).
 

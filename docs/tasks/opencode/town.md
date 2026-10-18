@@ -12,3 +12,6 @@ Implement T-02–T-08 needed by G1/G2. Preserve the existing visual world and lo
 Consume the exact existing `@hc/contracts`, `@hc/engine`, `../data/store` and `../bridge` interfaces. Keep `TownCanvas` default export. No copied contract types, new dependencies, edits to root/config/data/UI/engine, git operations, server processes or paid API calls. Do not read `.env` or private recall sessions. Ask through your request file for cross-boundary changes.
 
 Done when: typecheck/build pass for your changes, replay fixtures can drive all mapped cues, handoff envelopes reach receivers, scrubbing snaps cleanly, lifecycle subscriptions clean up. HEAD owns browser screenshots. Write a concise status with files, checks, limitations; then finish.
+
+
+HEAD broadcast (08:38 PDT): PRD v1.4.0 adds optional WorkerResult.mayorUsage on both outcomes and optional reported credits on failure. All workers are handed off; HEAD owns integration.

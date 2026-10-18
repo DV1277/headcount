@@ -6,8 +6,9 @@
     "variant": "max",
     "attempt": 2,
     "session": "ses_eb1689fb8ffei42fZBTfoxTV1v",
-    "state": "working",
-    "previousId": "hc-g1-town-1018-103821"
+    "state": "handoff",
+    "previousId": "hc-g1-town-1018-103821",
+    "ownership": "HEAD"
   },
   {
     "role": "hud",
@@ -16,17 +17,20 @@
     "variant": "max",
     "attempt": 1,
     "session": "ses_eb168a1c2ffenWXeGZswGp0LaU",
-    "state": "working"
+    "state": "handoff",
+    "ownership": "HEAD"
   },
   {
     "role": "runtime",
-    "id": "hc-g1-runtime-1018-103821-retry6",
+    "id": "hc-g1-runtime-api-1018-113107-retry2",
     "model": "opencode/glm-5.3-flash-free",
     "variant": "max",
-    "attempt": 6,
-    "session": "ses_eb1689fa3ffeCpAcQC0Eq50R8s",
-    "state": "working",
-    "previousId": "hc-g1-runtime-1018-103821-retry5"
+    "attempt": 2,
+    "state": "handoff",
+    "previousId": "hc-g1-runtime-api-1018-113107",
+    "card": "runtime-api",
+    "session": "ses_eb1385adaffeNRjlituHrkU4pv",
+    "ownership": "HEAD"
   },
   {
     "role": "intelligence",
@@ -35,8 +39,9 @@
     "variant": "max",
     "attempt": 3,
     "session": "ses_eb1689fdaffehGaw12c5JjsvmV",
-    "state": "working",
-    "previousId": "hc-g1-intelligence-1018-103821-retry2"
+    "state": "handoff",
+    "previousId": "hc-g1-intelligence-1018-103821-retry2",
+    "ownership": "HEAD"
   },
   {
     "role": "sites",
@@ -45,7 +50,8 @@
     "variant": "max",
     "attempt": 2,
     "session": "ses_eb1689fe1ffeLq6JDbgIMAClld",
-    "state": "working",
-    "previousId": "hc-g1-sites-1018-103821"
+    "state": "handoff",
+    "previousId": "hc-g1-sites-1018-103821",
+    "ownership": "HEAD"
   }
 ]

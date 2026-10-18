@@ -1,0 +1,69 @@
+{
+  "checkedAt": "2026-10-18T16:31:56.542Z",
+  "runId": "run_4hN7Q1M-b-",
+  "technicalChecks": "passed",
+  "phoneCellularCheck": {
+    "status": "passed",
+    "confirmedAt": "2026-10-18T16:05:17.826060+00:00",
+    "method": "Founder phone on cellular data",
+    "statement": "Yes, it opens correctly within 3 seconds"
+  },
+  "planSource": "model",
+  "events": 135,
+  "tasks": 3,
+  "competitors": [
+    {
+      "name": "Sharetea - UCLA (Westwood)",
+      "url": "https://www.1992sharetea.com/"
+    },
+    {
+      "name": "Just Boba Tea House",
+      "url": "https://www.ubereats.com/store/just-boba-tea-house/f6YoLxzgWDeOaFAkWFX7LA"
+    },
+    {
+      "name": "Le Phant Milk Tea Co.",
+      "url": "https://lephant.square.site/"
+    },
+    {
+      "name": "Milksha Westwood",
+      "url": "https://www.milksha.us/pages/locations/in-los-angeles-ca-1009-Broxton-Avenue"
+    }
+  ],
+  "sources": 8,
+  "siteUrl": "https://subscriber-karma-assignments-lifestyle.trycloudflare.com/sites/run_4hN7Q1M-b-/",
+  "siteBytes": 15125,
+  "handoffs": 2,
+  "revisions": 4,
+  "reportedUsd": 0.05584299999999999,
+  "creaoCreditUsageComplete": false,
+  "externalRuns": [
+    {
+      "agent": "scout",
+      "id": "a765bdb5-08e5-4d81-a54a-60f9d9468c64"
+    },
+    {
+      "agent": "scout",
+      "id": "bcd430d4-e41b-452e-aad3-3d1b82207d56"
+    },
+    {
+      "agent": "maker",
+      "id": "7e473538-bc81-42d5-bf6e-f8a11dfe90c4"
+    },
+    {
+      "agent": "herald",
+      "id": "586f3bd9-2644-494b-8ab4-33732bdd369b"
+    },
+    {
+      "agent": "herald",
+      "id": "bf25d745-53bf-45b1-b7f1-76551f41f9df"
+    },
+    {
+      "agent": "maker",
+      "id": "ed401bca-540f-4bb9-9440-ee31fe97b283"
+    },
+    {
+      "agent": "herald",
+      "id": "025e86cc-570c-4543-abca-12c8cd9f01ca"
+    }
+  ]
+}

@@ -12,3 +12,6 @@ Implement S-05, S-08 and recording support needed to review G1/G2. Keep `publish
 Implement `npm run smoke` script using ONLY HC_MAYOR=mock HC_WORKERS=mock HC_MOCK_SPEED=10. Start an isolated child server on an available test port, wait for health, create idea, assert no dispatch before approval, approve, read SSE to run.completed in<30sec, fetch artifacts and published site, run engine invariants. Stop every child/listener in finally. Do not edit root server files; they are being integrated concurrently. Smoke should give explicit failures, not false positives or real paid API calls. Implement record as a local copy of a completed run's log/artifacts/site to an explicitly provided fixture name, validate inputs and avoid overwriting existing fixtures by default.
 
 No dependencies or changes outside owned files, no git operations, no `.env` reading, no cloud tunnel launch or external API calls. Runtime/API implementation is another worker; use frozen public HTTP contracts, report any needed export/API via request file. Done when meaningful site tests pass, smoke is runnable once runtime lands, typecheck green; status with exact exports and checks, then finish.
+
+
+HEAD broadcast (08:38 PDT): PRD v1.4.0 adds optional WorkerResult.mayorUsage on both outcomes and optional reported credits on failure. All workers are handed off; HEAD owns integration.
