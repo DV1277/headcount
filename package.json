@@ -1,0 +1,39 @@
+{
+  "name": "headcount-1",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.9"
+  },
+  "scripts": {
+    "keys": "node scripts/setup-keys.mjs",
+    "check": "node --env-file-if-exists=.env scripts/check-keys.mjs",
+    "check:deep": "node --env-file-if-exists=.env scripts/check-keys.mjs --deep",
+    "dev": "npm run dev --workspace @hc/web",
+    "dev:server": "npm run dev --workspace @hc/server",
+    "build": "npm run build --workspace @hc/web",
+    "preview": "npm run preview --workspace @hc/web",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "smoke": "node --import tsx scripts/smoke.ts",
+    "smoke:foundation": "node --import tsx scripts/smoke-foundation.ts",
+    "record": "node --import tsx scripts/record.ts",
+    "scan:secrets": "node scripts/scan-secrets.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "@types/qrcode": "^1.5.5",
+    "@vitejs/plugin-react": "^4.3.0",
+    "typescript": "~5.5.4",
+    "tsx": "^4.19.0",
+    "vite": "~5.4.0",
+    "vitest": "^2.1.0"
+  }
+}

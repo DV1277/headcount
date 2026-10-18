@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ES2022", "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext", "moduleResolution": "Bundler", "jsx": "react-jsx",
+    "strict": true, "skipLibCheck": true, "esModuleInterop": true,
+    "resolveJsonModule": true, "isolatedModules": true, "noEmit": true,
+    "types": ["node", "vite/client"],
+    "baseUrl": ".", "paths": {
+      "@hc/contracts": ["packages/contracts/src/index.ts"],
+      "@hc/engine": ["packages/engine/src/index.ts"]
+    }
+  },
+  "include": ["apps/web/src", "apps/server/src", "packages", "scripts/*.ts", "apps/web/vite.config.ts"]
+}
