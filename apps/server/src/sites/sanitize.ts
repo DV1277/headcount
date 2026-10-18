@@ -17,6 +17,7 @@ const OPTIONS: sanitizeHtml.IOptions = {
   allowedTags: TAGS,
   allowedAttributes: { '*': ATTRIBUTES },
   allowedSchemes: [...BASIC_SCHEMES],
+  allowedSchemesAppliedToAttributes: ['href', 'src', 'cite', 'action', 'formaction'],
   allowedSchemesByTag: { a: ['http', 'https', 'mailto'], img: ['http', 'https', 'data'], link: ['https'], form: ['mailto'] },
   allowVulnerableTags: true,
   allowProtocolRelative: false,
@@ -36,5 +37,6 @@ function assertResidualFree(html: string): void {
 export function sanitizeSiteHtml(html: string): string {
   const clean = sanitizeHtml(html, OPTIONS);
   assertResidualFree(clean);
+  if(Buffer.byteLength(clean,'utf8')>120*1024)throw new Error('Sanitized site HTML exceeds 120 KB.');
   return clean;
 }

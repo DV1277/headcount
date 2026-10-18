@@ -1,9 +1,10 @@
 /** Shared filesystem location helpers for published sites and run data (PRD §9.4). */
 import { mkdir, rename, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
+import {randomUUID} from 'node:crypto';
 
-export const REPO_ROOT = fileURLToPath(new URL('../../..', import.meta.url));
+export const REPO_ROOT = fileURLToPath(new URL('../../../..', import.meta.url));
 
 const RUN_ID_RE = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,99}$/;
 
@@ -13,7 +14,7 @@ export function isSafeRunId(runId: string): boolean {
 }
 
 export function runsRoot(): string {
-  return join(REPO_ROOT, 'runs');
+  return process.env.HC_RUNS_DIR?.trim()?resolve(process.env.HC_RUNS_DIR.trim()):join(REPO_ROOT, 'runs');
 }
 
 export function runDir(runId: string): string {
@@ -33,7 +34,7 @@ export function siteFilePath(runId: string): string {
 export async function writeFileAtomic(filePath: string, contents: string): Promise<void> {
   const dir = filePath.slice(0, filePath.lastIndexOf('/')) || '.';
   await mkdir(dir, { recursive: true });
-  const tmp = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+  const tmp = `${filePath}.${randomUUID()}.tmp`;
   await writeFile(tmp, contents);
   await rename(tmp, filePath);
 }

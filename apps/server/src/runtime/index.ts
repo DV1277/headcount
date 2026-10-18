@@ -1,3 +1,28 @@
-import type { EventEnvelope, TownEvent } from '@hc/contracts';
-export interface EventLog {append(event:TownEvent):Promise<EventEnvelope>;read(from?:number):EventEnvelope[];}
-export function createEventLog(_runId:string):EventLog {throw new Error('Not implemented: O3 S-01 append-only event log.');}
+/** Runtime barrel: append-only log, typed run errors, storage helpers. */
+export type {
+  EventLog,
+  EventLogBase,
+  EventLogOptions,
+  EventLogStream,
+  EventLogSubscription,
+} from './eventLog';
+export {
+  createEventLog,
+  openEventLog,
+} from './eventLog';
+export type { EventEnvelope } from '@hc/contracts';
+export {
+  RunError,
+  badRequest,
+  conflict,
+  notFound,
+  invalidBody,
+} from './errors';
+export {
+  isSafeRunId,
+  runsRoot,
+  runDir,
+  eventsPath,
+  artifactsDir,
+  artifactPath,
+} from './fs';

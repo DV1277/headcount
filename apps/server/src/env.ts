@@ -5,6 +5,7 @@ export const env=z.object({
   HC_MOCK_SPEED:z.coerce.number().positive().default(1),HC_TASK_TIMEOUT_MS:z.coerce.number().positive().default(360000),
   PUBLIC_BASE_URL:z.string().default(''),STEPFUN_MODEL:z.literal('step-5-preview').default('step-5-preview'),
   CREAO_API_MODE:z.enum(['app','account']).default('app'),
+  HC_RUNS_DIR:z.string().default(''),
 }).parse(process.env);
 export function missingCredentials():string[] {
   if(env.HC_MODE==='demo')return [];

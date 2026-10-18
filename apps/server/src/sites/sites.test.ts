@@ -1,5 +1,6 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import express, { type Server } from 'express';
+import express from 'express';
+import type { Server } from 'node:http';
 import { publishSite, siteUrlFor, createSitesRouter, SITE_CSP } from './index';
 import { sanitizeSiteHtml } from './sanitize';
 import { runsRoot, siteFilePath } from './paths';
@@ -30,6 +31,9 @@ afterAll(async () => {
 
 /* AC-07.2 / HC-N-021 sanitizer contract. */
 describe('sanitizeSiteHtml', () => {
+  it('enforces the byte budget after escaping can expand the input',()=>{
+    expect(()=>sanitizeSiteHtml('&'.repeat(30_000))).toThrow('120 KB');
+  });
   const assertClean = (out: string): void => {
     expect(out).not.toMatch(/<script/i);
     expect(out).not.toMatch(/<iframe/i);
@@ -86,7 +90,7 @@ describe('sanitizeSiteHtml', () => {
   it('keeps data: images but applies per-tag scheme rules', () => {
     const out = sanitizeSiteHtml('<img src="data:image/png;base64,AAAA"><a href="http://x.example/">a</a><link href="http://fonts.googleapis.com/x" rel="stylesheet">');
     expect(out).toContain('src="data:image/png;base64,AAAA"');
-    expect(out).not.toContain('"data:'); // data: never for links or forms
+    expect(out).not.toMatch(/(?:href|action)="data:/); // data: never for links or forms
     expect(out).not.toContain('http://fonts.googleapis.com'); // stylesheet links are https only
   });
 
