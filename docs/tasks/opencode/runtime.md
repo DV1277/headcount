@@ -1,0 +1,14 @@
+# G1/G2 runtime, API and executor
+
+HEAD broadcast: PRD v1.3.0 / ADR-017 makes app-trigger CREAO primary by founder request; account realtime is optional. Read docs/requests/HEAD.md for current integration notices.
+
+Headless OpenCode worker, repository `/Users/DV/LA-Hacks-2026`. HEAD integrates and owns server `index.ts`/`env.ts`.
+
+WRITE: `apps/server/src/api/**`, `apps/server/src/runtime/**`, `apps/server/src/payroll/**`, `apps/server/src/demo/**`, `docs/status/oc-runtime.md`, `docs/requests/oc-runtime.md` only.
+READ: PRD §§6 E01/E03/E04/E09/E10, 7, 8, 11.4–11.5, 16–17; contracts/engine, Mayor/Worker interfaces, existing data source SSE requirements.
+
+Implement S-01–S-04/S-06 for G1/G2: persistent append-only EventLog (`runs/<id>/events.jsonl`), gapless seq and ISO/time, indexed history, race-free SSE history/live subscription with from/Last-Event-ID and heartbeat/cleanup; RunManager; REST §8.7; one active nonterminal run; async plan proposal and approval gate. DAG dispatches ready tasks in parallel with accepted/skipped dependency inputs, single handoff per task/dependency, one retry, per-attempt timeout and visible failure ladder. Follow §8.4.1 canonical order exactly. Persist full artifacts; call the separate sites module before publishing the site artifact. Complete terminal tasks → finishing → brief → completed with actual stats. Include review/redirect/pause holding where needed to make existing public routes safe. Explicit run-state validation for all actions, body validation with schemas, path-safe IDs, JSON errors and no leaked secrets. Record actual usage ticks and enforce budget/kill guard. Recover interrupted persisted runs as failed/server_restart.
+
+Keep `createEventLog(runId)` compatible with the existing EventLog interface. Export `createRunManager(options?)` from runtime with methods `create(idea)`, `list()`, `get(runId)`, `approve(runId,plan)`, `answer(runId,qid,text)`, `redirect(runId,agent,note)`, `pause(runId)`, `resume(runId)`, `replan(runId)`, `getArtifact(runId,aid)`, `subscribe(runId,listener)`. Expose `apiRouter` using a lazy singleton manager so HEAD can mount the existing export; if factories are cleaner also export `createApiRouter(manager)`. Document all final signatures in status. HEAD will adapt root wiring. Existing Mayor/Worker factories will be implemented concurrently; import the exact interfaces, no duplicate fakes here.
+
+Do not edit sites, mayor/workers/llm, integrations, scripts, root/config or shared packages. No deps/commits, no reading `.env`, no paid live calls. Unit tests must inject fakes. Coordinate through request files; do not overwrite others' work. Done when API/executor tests cover approval, parallel dependencies, SSE resume, retry/timeout/pause and valid invariants; typecheck green. Write status and finish.

@@ -1,0 +1,51 @@
+[
+  {
+    "role": "town",
+    "id": "hc-g1-town-1018-103821-retry2",
+    "model": "opencode/glm-5.3-flash-free",
+    "variant": "max",
+    "attempt": 2,
+    "session": "ses_eb1689fb8ffei42fZBTfoxTV1v",
+    "state": "working",
+    "previousId": "hc-g1-town-1018-103821"
+  },
+  {
+    "role": "hud",
+    "id": "hc-g1-hud-1018-103821",
+    "model": "opencode/glm-5.3-flash-free",
+    "variant": "max",
+    "attempt": 1,
+    "session": "ses_eb168a1c2ffenWXeGZswGp0LaU",
+    "state": "working"
+  },
+  {
+    "role": "runtime",
+    "id": "hc-g1-runtime-1018-103821-retry6",
+    "model": "opencode/glm-5.3-flash-free",
+    "variant": "max",
+    "attempt": 6,
+    "session": "ses_eb1689fa3ffeCpAcQC0Eq50R8s",
+    "state": "working",
+    "previousId": "hc-g1-runtime-1018-103821-retry5"
+  },
+  {
+    "role": "intelligence",
+    "id": "hc-g1-intelligence-1018-103821-retry3",
+    "model": "opencode/glm-5.3-flash-free",
+    "variant": "max",
+    "attempt": 3,
+    "session": "ses_eb1689fdaffehGaw12c5JjsvmV",
+    "state": "working",
+    "previousId": "hc-g1-intelligence-1018-103821-retry2"
+  },
+  {
+    "role": "sites",
+    "id": "hc-g1-sites-1018-103821-retry2",
+    "model": "opencode/glm-5.3-flash-free",
+    "variant": "max",
+    "attempt": 2,
+    "session": "ses_eb1689fe1ffeLq6JDbgIMAClld",
+    "state": "working",
+    "previousId": "hc-g1-sites-1018-103821"
+  }
+]
