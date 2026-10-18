@@ -25,17 +25,22 @@
     "smoke:foundation": "node --import tsx scripts/smoke-foundation.ts",
     "record": "node --import tsx scripts/record.ts",
     "verify:real": "node --env-file-if-exists=.env --import tsx scripts/verify-real-run.ts",
-    "scan:secrets": "node scripts/scan-secrets.mjs"
+    "scan:secrets": "node scripts/scan-secrets.mjs",
+    "build:edge": "VITE_PUBLIC_DEMO=1 npm run build && node scripts/prepare-edge.mjs",
+    "dev:edge": "npm run build:edge && CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false wrangler dev --config wrangler.jsonc --port 8790",
+    "deploy": "npm run build:edge && wrangler deploy --config wrangler.jsonc",
+    "deploy:check": "npm run build:edge && wrangler deploy --config wrangler.jsonc --dry-run"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
+    "@types/qrcode": "^1.5.5",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
-    "@types/qrcode": "^1.5.5",
     "@vitejs/plugin-react": "^4.3.0",
-    "typescript": "~5.5.4",
     "tsx": "^4.19.0",
+    "typescript": "~5.5.4",
     "vite": "~5.4.0",
-    "vitest": "^2.1.0"
+    "vitest": "^2.1.0",
+    "wrangler": "4.151.1"
   }
 }

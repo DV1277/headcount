@@ -10,5 +10,5 @@
       "@hc/engine": ["packages/engine/src/index.ts"]
     }
   },
-  "include": ["apps/web/src", "apps/server/src", "packages", "scripts/*.ts", "apps/web/vite.config.ts"]
+  "include": ["apps/web/src", "apps/server/src", "apps/edge", "packages", "scripts/*.ts", "apps/web/vite.config.ts"]
 }

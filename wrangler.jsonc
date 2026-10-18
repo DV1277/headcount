@@ -1,0 +1,15 @@
+{
+  // Cloudflare Workers Static Assets hosting for the headcount-1 Vite demo.
+  // Static only: no vars, no secrets, no KV/R2/D1, no other providers.
+  "name": "headcount-1-demo",
+  "main": "apps/edge/worker.ts",
+  "compatibility_date": "2026-10-18",
+  "workers_dev": true,
+  "assets": {
+    "directory": "apps/web/dist",
+    "binding": "ASSETS",
+    "html_handling": "none",
+    "not_found_handling": "none",
+    "run_worker_first": true
+  }
+}
