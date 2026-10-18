@@ -1,0 +1,104 @@
+{
+  "a_research": {
+    "id": "a_research",
+    "runId": "run_redirect",
+    "taskId": "t1",
+    "agent": "scout",
+    "via": "mock",
+    "kind": "research",
+    "title": "Westwood boba market scan",
+    "createdAt": "2026-10-18T09:00:00.000Z",
+    "payload": {
+      "competitors": [
+        {
+          "name": "Example Tea House",
+          "url": "https://example.com/tea",
+          "priceNote": "$6–8 (illustrative)",
+          "notes": "Fixture example; verify independently."
+        },
+        {
+          "name": "Sample Pearl Bar",
+          "url": "https://example.org/pearls",
+          "priceNote": "$5–7 (illustrative)",
+          "notes": "Fictional competitor for offline demo."
+        }
+      ],
+      "audience": "Westwood students looking for a quick customizable afternoon drink.",
+      "priceBand": "$6–9 per drink (illustrative)",
+      "gaps": [
+        "Clear pickup timing during class changes."
+      ],
+      "sources": [
+        "https://example.com/tea",
+        "https://example.org/pearls"
+      ]
+    }
+  },
+  "a_research_v2": {
+    "id": "a_research_v2",
+    "runId": "run_redirect",
+    "taskId": "t1",
+    "agent": "scout",
+    "via": "mock",
+    "kind": "research",
+    "title": "Westwood boba scan (labeled fixture)",
+    "createdAt": "2026-10-18T09:00:00.000Z",
+    "payload": {
+      "competitors": [
+        {
+          "name": "Example Tea House",
+          "url": "https://example.com/tea",
+          "priceNote": "$6–8 (illustrative)",
+          "notes": "Fixture example; verify independently."
+        },
+        {
+          "name": "Sample Pearl Bar",
+          "url": "https://example.org/pearls",
+          "priceNote": "$5–7 (illustrative)",
+          "notes": "Fictional competitor for offline demo."
+        }
+      ],
+      "audience": "Westwood students looking for a quick customizable afternoon drink.",
+      "priceBand": "$6–9 per drink (illustrative)",
+      "gaps": [
+        "Clear pickup timing during class changes."
+      ],
+      "sources": [
+        "https://example.com/tea",
+        "https://example.org/pearls"
+      ]
+    }
+  },
+  "a_site": {
+    "id": "a_site",
+    "runId": "run_redirect",
+    "taskId": "t2",
+    "agent": "maker",
+    "via": "mock",
+    "kind": "site",
+    "title": "Golden Boba preorder page",
+    "createdAt": "2026-10-18T09:00:00.000Z",
+    "payload": {
+      "headline": "Your next favorite study break",
+      "html": "<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Golden Boba · Fixture</title><style>body{font:18px system-ui;max-width:700px;margin:4rem auto;padding:0 1rem;background:#fff8e8;color:#30251d}button{background:#bd572f;color:white;border:0;padding:1rem;border-radius:9px}</style></head><body><p>OFFLINE DEMO · FIXTURE / MOCK</p><h1>Your next favorite study break</h1><p>Golden Boba is a fictional neighborhood tea counter concept. Choose your sweetness, pick a time, and get back to your day.</p><button>Join the sample waitlist</button><small> Demo only. No order is placed.</small></body></html>"
+    }
+  },
+  "a_brief": {
+    "id": "a_brief",
+    "runId": "run_redirect",
+    "taskId": null,
+    "agent": "mayor",
+    "via": "mock",
+    "kind": "brief",
+    "title": "Founder brief",
+    "createdAt": "2026-10-18T09:00:00.000Z",
+    "payload": {
+      "markdown": "# Founder brief (fixture)\nGolden Boba is a fictional concept. Validate demand before investment.",
+      "nextSteps": [
+        "Interview five students.",
+        "Test pickup windows.",
+        "Replace mock competitor data with verified research."
+      ]
+    }
+  }
+}

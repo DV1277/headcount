@@ -1,0 +1,12 @@
+import type { AgentId, DeptId } from './roster';
+import type { Artifact, Plan, RunStatus } from './domain';
+export type ApiError = {error:{code:string;message:string;runId?:string}};
+export type CreateRunRequest = {idea:string};
+export type CreateRunResponse = {runId:string};
+export type ApproveRequest = {plan:Plan};
+export type AnswerRequest = {qid:string;text:string};
+export type RedirectRequest = {agent:DeptId;note:string};
+export type RunListItem = {runId:string;title:string;status:RunStatus;createdAt:string};
+export type HealthResponse = {ok:boolean;mode:'live'|'mock'|'demo';stepfun:'ok'|'down'|'mock';creao:'ok'|'down'|'mock';publicBaseUrl:string|null};
+export type ArtifactResponse = Artifact;
+export type PayrollByAgent = Record<AgentId,{credits:number;usd:number}>;

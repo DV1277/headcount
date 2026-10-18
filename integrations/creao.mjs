@@ -29,8 +29,25 @@ export async function getRun(runId) {
 }
 
 /** Poll until completed | failed | cancelled. onTick(run) fires after every poll. */
-export async function waitForRun(runId, { intervalMs = 5000, timeoutMs = 15 * 60_000, onTick } = {}) {
-  return poll(() => getRun(runId), runId, { intervalMs, timeoutMs, onTick });
+export async function waitForRun(runId, { intervalMs = 5000, timeoutMs = 15 * 60_000, onTick, signal } = {}) {
+  return poll(() => getRun(runId), runId, { intervalMs, timeoutMs, onTick, signal });
+}
+
+/**
+ * Realtime run on a saved agent (developer path). Returns the raw Response; the body is an
+ * NDJSON stream. The caller must consume it and is responsible for aborting via `signal`
+ * (there is no server-side cancel endpoint). Long-lived: no internal timeout.
+ */
+export async function createRealtimeRun(agentId, input, { signal } = {}) {
+  requireEnv("CREAO_API_KEY");
+  return request(`${base()}/realtime/runs`, {
+    method: "POST",
+    headers: auth(),
+    json: { agent_id: agentId, input },
+    parse: "response",
+    timeoutMs: 0,
+    signal,
+  });
 }
 
 // ---- App-scoped path (per-agent capi_ key) ----
