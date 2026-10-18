@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { ROSTER, type Plan, type PlanTask } from '@hc/contracts';
 import { useStore } from '../data/store';
+import { IconAfter, IconCheck, IconClose, IconReplay } from './icons';
 import { sourceLabel } from './lib';
+import { OwnerChip } from './parts';
 
 type Props = { plan: Plan; editable: boolean; onClose(): void; onApproved(): void };
 
@@ -27,10 +29,15 @@ export function PlanModal({ plan, editable, onClose, onApproved }: Props) {
   const [pending, setPending] = useState<{ taskId: string; affected: string[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<'none' | 'approve' | 'replan'>('none');
+  const [focused, setFocused] = useState<string | null>(null);
   const liveEditable = useStore((s) => s.mode === 'live' && !s.history);
   const status = useStore((s) => s.state.status);
   const planSource = useStore((s) => s.state.planSource);
-  const canApprove = editable && liveEditable && status === 'awaiting_approval' && busy === 'none' && !pending;
+  const canEdit = editable && liveEditable && status === 'awaiting_approval';
+  const canApprove = canEdit && busy === 'none' && !pending;
+  const editTask = (id: string, field: 'title' | 'instructions', value: string) => {
+    setDraft((current) => ({ ...current, tasks: current.tasks.map((item) => item.id === id ? { ...item, [field]: value } : item) }));
+  };
   const note = !liveEditable
     ? 'Live controls are disabled while viewing a recording.'
     : status === 'awaiting_approval' ? null : 'The run has moved past approval; this plan is for reference.';
@@ -68,51 +75,65 @@ export function PlanModal({ plan, editable, onClose, onApproved }: Props) {
     finally { setBusy('none'); }
   };
   const pendingTask = pending ? draft.tasks.find((task) => task.id === pending.taskId) : null;
+  const included = draft.tasks.filter((task) => task.enabled).length;
 
-  return <section className="hc-modal hc-modal--plan">
-    <header className="hc-modal-head">
-      <div>
-        <h2 className="hc-modal-title" id="hc-modal-title">{draft.title}</h2>
-        <p className="hc-modal-summary">{draft.summary}</p>
+  return <section className="hc-modal hc-modal--plan hc-scroll-modal" aria-labelledby="hc-modal-title">
+    <span className="hc-rod hc-rod--top" aria-hidden="true"><i /><i /></span>
+    <span className="hc-rod hc-rod--bottom" aria-hidden="true"><i /><i /></span>
+    <header className="hc-plan-head">
+      <div className="hc-plan-head-main">
+        <span className="hc-kicker">PLAN · DRAFTED BY MAYOR MABEL</span>
+        <h2 className="hc-plan-title-text" id="hc-modal-title">{draft.title}</h2>
+        <p className="hc-plan-summary">{draft.summary}</p>
       </div>
-      <button className="hc-button hc-icon-button" type="button" aria-label="Close plan" onClick={onClose}>✕</button>
+      <div className="hc-plan-meta">
+        <strong>{draft.tasks.length} tasks · {included} included</strong>
+        <span>reported usage appears in payroll</span>
+      </div>
+      <button className="hc-icon-btn hc-icon-btn--small hc-plan-close" type="button" aria-label="Close plan" onClick={onClose}><IconClose size={14} /></button>
     </header>
-    <div className="hc-modal-body">
+    <div className="hc-plan-body">
       {note && <p className="hc-modal-note" data-tone="muted">{note}</p>}
       <ul className="hc-plan-tasks">
         {draft.tasks.map((task) => {
-          const record = draft.tasks.find((item) => item.id === task.id);
           const pendingHere = pending?.affected.includes(task.id) ?? false;
-          return <li className={`hc-plan-row${pendingHere ? ' hc-plan-row--pending' : ''}`} key={task.id}>
+          const deps = task.dependsOn;
+          return <li className={`hc-plan-row${pendingHere ? ' hc-plan-row--pending' : ''}${task.enabled ? '' : ' hc-plan-row--off'}`} key={task.id}>
             <div className="hc-plan-top">
-              <input type="checkbox" className="hc-task-check" checked={record?.enabled ?? task.enabled} disabled={!canApprove} aria-label={`${task.enabled ? 'Include' : 'Skip'} ${task.title}`} onChange={(e) => toggle(task, e.currentTarget.checked)} />
-              <span className="hc-owner-dot" style={{ backgroundColor: ROSTER[task.owner].color }} />
-              {canApprove
-                ? <input className="hc-plan-title" value={task.title} maxLength={60} aria-label={`Title for ${ROSTER[task.owner].name}'s task`} onChange={(e) => setDraft((current) => ({ ...current, tasks: current.tasks.map((item) => item.id === task.id ? { ...item, title: e.currentTarget.value } : item) }))} />
-                : <strong>{task.title}</strong>}
-              <span className="hc-agent-badge">{ROSTER[task.owner].name}</span>
+              <label className="hc-check" data-on={task.enabled}>
+                <input type="checkbox" checked={task.enabled} disabled={!canApprove} aria-label={`${task.enabled ? 'Include' : 'Skip'} ${task.title}`} onChange={(e) => toggle(task, e.currentTarget.checked)} />
+                <span aria-hidden="true">{task.enabled && <IconCheck size={14} />}</span>
+              </label>
+              <span className="hc-plan-id">{task.id}</span>
+              <OwnerChip agent={task.owner} />
+              {canEdit
+                ? <input className="hc-plan-title" value={task.title} maxLength={60} aria-label={`Title for ${ROSTER[task.owner].name}'s task`} onFocus={() => setFocused(task.id)} onBlur={() => setFocused(null)} onChange={(e) => editTask(task.id, 'title', e.currentTarget.value)} />
+                : <strong className="hc-plan-title hc-plan-title--static">{task.title}</strong>}
+              <span className="hc-plan-after">{deps.length ? <><IconAfter size={14} />after {deps.join(', ')}</> : 'starts first'}</span>
             </div>
-            {canApprove
-              ? <textarea className="hc-plan-instructions" value={task.instructions} maxLength={600} rows={2} aria-label={`Instructions for ${ROSTER[task.owner].name}'s task`} onChange={(e) => setDraft((current) => ({ ...current, tasks: current.tasks.map((item) => item.id === task.id ? { ...item, instructions: e.currentTarget.value } : item) }))} />
+            {canEdit
+              ? <textarea className={`hc-plan-instructions${focused === task.id ? ' is-focused' : ''}`} value={task.instructions} maxLength={600} rows={2} aria-label={`Instructions for ${ROSTER[task.owner].name}'s task`} onFocus={() => setFocused(task.id)} onBlur={() => setFocused(null)} onChange={(e) => editTask(task.id, 'instructions', e.currentTarget.value)} />
               : <p className="hc-plan-instructions-text">{task.instructions}</p>}
-            <small>{task.deliverable.replace('_', ' ')} · {task.dependsOn.length ? `after ${task.dependsOn.map((id) => draft.tasks.find((item) => item.id === id)?.title ?? id).join(' · ')}` : 'no dependencies'} · {task.enabled ? 'included' : 'skipped'}</small>
           </li>;
         })}
       </ul>
       {pending && pendingTask && <div className="hc-cascade-confirm" role="alert">
         <p>Skipping “{pendingTask.title}” also skips {pending.affected.length === 1 ? '1 dependent task' : `${pending.affected.length} dependent tasks`}: {pending.affected.map((id) => draft.tasks.find((task) => task.id === id)?.title ?? id).join(' · ')}.</p>
         <div className="hc-cascade-actions">
-          <button className="hc-button" type="button" onClick={() => setPending(null)}>Cancel</button>
-          <button className="hc-button" type="button" onClick={() => applySkip([pending.taskId, ...pending.affected])}>Confirm skip</button>
+          <button className="hc-btn hc-btn--sm" type="button" onClick={() => setPending(null)}>Cancel</button>
+          <button className="hc-btn hc-btn--sm" type="button" onClick={() => applySkip([pending.taskId, ...pending.affected])}>Confirm skip</button>
         </div>
       </div>}
       {error && <p className="hc-modal-note" data-tone="err" role="alert">{error}</p>}
     </div>
-    <footer className="hc-modal-foot">
-      <span className="hc-source" data-source={planSource ?? 'model'}>{sourceLabel(planSource)}</span>
+    <footer className="hc-plan-foot">
+      <div className="hc-source" data-source={planSource ?? 'model'}>
+        <strong>{sourceLabel(planSource)}{planSource === 'model' || !planSource ? ' · Step 5 Preview' : ''}</strong>
+        <span>{canEdit ? 'Edit any title or instruction before you approve.' : 'Read-only view of this plan.'}</span>
+      </div>
       <div className="hc-modal-foot-actions">
-        {canApprove && <button className="hc-button" type="button" disabled={busy !== 'none'} onClick={() => void replan()}>{busy === 'replan' ? 'Re-planning…' : 'Re-plan'}</button>}
-        <button className="hc-button hc-button--primary" type="button" disabled={!canApprove} title={canApprove ? undefined : 'Approval needs a live run waiting for approval.'} onClick={() => void submit()}>{busy === 'approve' ? 'Approving…' : 'Approve plan'}</button>
+        {canEdit && <button className="hc-btn hc-btn--lg" type="button" disabled={busy !== 'none' || Boolean(pending)} onClick={() => void replan()}><IconReplay size={14} />{busy === 'replan' ? 'Re-planning…' : 'Re-plan'}</button>}
+        <button className="hc-btn hc-btn--primary hc-btn--lg" type="button" disabled={!canApprove} title={canApprove ? undefined : 'Approval needs a live run waiting for approval.'} onClick={() => void submit()}><IconCheck size={14} />{busy === 'approve' ? 'Approving…' : 'Approve plan'}</button>
       </div>
     </footer>
   </section>;

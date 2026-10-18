@@ -8,7 +8,7 @@ export function QrCode({ value, size = 128 }: { value: string; size?: number }) 
     let alive = true;
     setSrc(null);
     setFailed(false);
-    toDataURL(value, { margin: 1, scale: 4, errorCorrectionLevel: 'M' }).then(
+    toDataURL(value, { margin: 4, scale: 4, errorCorrectionLevel: 'M' }).then(
       (url) => { if (alive) setSrc(url); },
       () => { if (alive) setFailed(true); },
     );

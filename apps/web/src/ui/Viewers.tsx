@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import type { Artifact, ArtifactMeta, BriefPayload, LaunchKitPayload, ResearchPayload, SitePayload } from '@hc/contracts';
+import { ROSTER, type Artifact, type BriefPayload, type LaunchKitPayload, type ResearchPayload, type SitePayload } from '@hc/contracts';
 import { useStore } from '../data/store';
 import { Markdown } from './Markdown';
 import { QrCode } from './QrCode';
-import { CopyButton, DownloadButton, KIND_META, artifactFileName, formatClock, publicUrlKind, taskStatusMeta, viaLabel } from './lib';
+import { ARTIFACT_ICON, IconClose, IconExternal, IconReplay, IconWarn } from './icons';
+import { CopyButton, DownloadButton, DELIVERABLE_LABEL, artifactFileName, formatClock, isIllustrativeRecording, parseChoices, pillFor, publicUrlKind, safeWebHref, swatchFor, viaLabel } from './lib';
+import { Portrait, StatusPill } from './parts';
 
 type Load =
   | { kind: 'loading' }
@@ -41,14 +43,6 @@ function launchKitText(payload: LaunchKitPayload): string {
   return lines.join('\n');
 }
 
-function ReviewState({ meta, taskStatus }: { meta: ArtifactMeta & { review?: { verdict: 'accept' | 'revise'; note: string }; stale?: boolean }; taskStatus: string | null }) {
-  if (meta.stale) return <span className="hc-task-status" data-tone="muted">— superseded</span>;
-  if (meta.review) return <span className="hc-task-status" data-tone={meta.review.verdict === 'accept' ? 'ok' : 'warn'}>{meta.review.verdict === 'accept' ? '✓ accepted' : '↻ revision asked'}</span>;
-  if (taskStatus === 'under_review' || taskStatus === 'submitted') return <span className="hc-task-status" data-tone="warn">⧗ in review</span>;
-  if (taskStatus === 'failed') return <span className="hc-task-status" data-tone="err">✕ failed</span>;
-  return <span className="hc-task-status" data-tone="info">⧗ fresh</span>;
-}
-
 function ResearchViewer({ payload }: { payload: ResearchPayload }) {
   return <>
     <dl className="hc-viewer-facts">
@@ -59,7 +53,7 @@ function ResearchViewer({ payload }: { payload: ResearchPayload }) {
       <thead><tr><th scope="col">Competitor</th><th scope="col">Price note</th><th scope="col">Notes</th></tr></thead>
       <tbody>
         {payload.competitors.map((competitor) => <tr key={competitor.url}>
-          <td><a href={competitor.url} target="_blank" rel="noopener noreferrer nofollow">{competitor.name}</a></td>
+          <td><a href={safeWebHref(competitor.url)} target="_blank" rel="noopener noreferrer nofollow">{competitor.name}</a></td>
           <td>{competitor.priceNote}</td>
           <td>{competitor.notes}</td>
         </tr>)}
@@ -68,12 +62,14 @@ function ResearchViewer({ payload }: { payload: ResearchPayload }) {
     <h4 className="hc-viewer-heading">Gaps to exploit</h4>
     <ul className="hc-viewer-list">{payload.gaps.map((gap) => <li key={gap}>{gap}</li>)}</ul>
     <h4 className="hc-viewer-heading">Sources</h4>
-    <ul className="hc-viewer-list hc-viewer-links">{payload.sources.map((source) => <li key={source}><a href={source} target="_blank" rel="noopener noreferrer nofollow">{source}</a></li>)}</ul>
+    <ul className="hc-viewer-list hc-viewer-links">{payload.sources.map((source) => <li key={source}><a href={safeWebHref(source)} target="_blank" rel="noopener noreferrer nofollow">{source}</a></li>)}</ul>
   </>;
 }
 
 function SiteViewer({ artifact, payload }: { artifact: Artifact; payload: SitePayload }) {
-  const url = artifact.url ?? null;
+  const rawUrl=artifact.url;
+  const bundledPreview=Boolean(rawUrl?.startsWith('/')&&!rawUrl.startsWith('//'));
+  const url = rawUrl ? (rawUrl.startsWith('/')&&!rawUrl.startsWith('//')?rawUrl:safeWebHref(rawUrl))??null : null;
   const kind = publicUrlKind(url);
   const frameProps = url
     ? { src: url, srcDoc: undefined as string | undefined }
@@ -81,7 +77,7 @@ function SiteViewer({ artifact, payload }: { artifact: Artifact; payload: SitePa
   return <>
     <dl className="hc-viewer-facts">
       <div><dt>Headline</dt><dd>{payload.headline}</dd></div>
-      <div><dt>Link</dt><dd className="hc-viewer-url">{url ? <code>{url}</code> : 'No published URL yet'}</dd></div>
+      <div><dt>Link</dt><dd className="hc-viewer-url">{bundledPreview?'Bundled offline preview':url ? <code>{url}</code> : 'No published URL yet'}</dd></div>
     </dl>
     <iframe className="hc-site-frame" title={`Site preview: ${artifact.title}`} sandbox="" referrerPolicy="no-referrer" loading="lazy" {...frameProps} />
     <div className="hc-qr-block">
@@ -90,9 +86,9 @@ function SiteViewer({ artifact, payload }: { artifact: Artifact; payload: SitePa
           <QrCode value={url} />
           <figcaption>{kind === 'public' ? 'Scan to open this site on your phone.' : 'Works on the venue Wi-Fi only — not on cellular.'}</figcaption>
         </figure>
-        : <p className="hc-local-note" data-tone="muted">Local preview only — this link works on this machine until a public URL is configured. Scan-ready QR appears once the site is published to a public address.</p>}
+        : <p className="hc-local-note" data-tone="muted">{bundledPreview?'This saved preview works offline. The final card keeps the original public link and QR.':'Local preview only — this link works on this machine until a public URL is configured. Scan-ready QR appears once the site is published to a public address.'}</p>}
       <div className="hc-viewer-actions">
-        {url && <CopyButton text={url} label="Copy link" />}
+        {url && !bundledPreview && <CopyButton text={url} label="Copy link" />}
         <DownloadButton name={artifactFileName(artifact.id, 'site')} text={payload.html} mime="text/html" />
       </div>
     </div>
@@ -140,18 +136,20 @@ export function ArtifactViewer({ artifactId, onClose }: { artifactId: string; on
   useEffect(() => loadArtifact(artifactId, setLoad), [artifactId]);
   const meta = state.artifacts[artifactId];
   const task = meta?.taskId ? state.tasks[meta.taskId] : null;
-  const status = task ? taskStatusMeta(task.status) : null;
   const viewed = load.kind === 'ok' ? load.artifact : null;
-  return <section className="hc-modal hc-modal--wide">
+  const Icon = ARTIFACT_ICON[meta?.kind ?? 'research'];
+  const owner = meta ? ROSTER[meta.agent] : null;
+  return <section className="hc-modal hc-modal--wide" aria-labelledby="hc-modal-title">
     <header className="hc-modal-head">
-      <div>
-        <h2 className="hc-modal-title hc-modal-title--small" id="hc-modal-title"><span aria-hidden="true">{KIND_META[meta?.kind ?? 'research'].icon}</span> {meta?.title ?? 'Deliverable'}</h2>
+      <span className="hc-deliv-icon hc-deliv-icon--lg" style={{ borderColor: owner?.color }}><Icon size={18} /></span>
+      <div className="hc-modal-head-main">
+        <h2 className="hc-modal-title hc-modal-title--small" id="hc-modal-title">{meta?.title ?? 'Deliverable'}</h2>
         {meta && <p className="hc-modal-summary">
-          {KIND_META[meta.kind].label} · {viaLabel(meta.via)}
-          {status && <> · <span className="hc-task-status" data-tone={status.tone}>{status.icon} {status.word}</span></>}
+          {DELIVERABLE_LABEL[meta.kind]} · {owner?.name} · {viaLabel(meta.via)}
+          {task && <> <StatusPill meta={pillFor(meta.stale ? 'skipped' : task.status)} /></>}
         </p>}
       </div>
-      <button className="hc-button hc-icon-button" type="button" aria-label="Close deliverable" onClick={onClose}>✕</button>
+      <button className="hc-icon-btn hc-icon-btn--small" type="button" aria-label="Close deliverable" onClick={onClose}><IconClose size={14} /></button>
     </header>
     <div className="hc-modal-body">
       {load.kind === 'loading' && <p className="hc-viewer-loading">Loading this deliverable…</p>}
@@ -166,32 +164,66 @@ export function ArtifactViewer({ artifactId, onClose }: { artifactId: string; on
 
 export function QuestionModal({ qid, text, onClose }: { qid: string; text: string; onClose(): void }) {
   const [value, setValue] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const liveEditable = useStore((s) => s.mode === 'live' && !s.history);
   const status = useStore((s) => s.state.status);
   const canAnswer = liveEditable && status === 'awaiting_founder';
+  const choices = parseChoices(text);
   const send = async (answer: string) => {
     try { await useStore.getState().answer(qid, answer); onClose(); }
-    catch { onClose(); }
+    catch { setError('Sending failed. See the notice above the town for details.'); }
   };
-  return <section className="hc-modal">
-    <header className="hc-modal-head">
-      <div><h2 className="hc-modal-title hc-modal-title--small" id="hc-modal-title">The Mayor has a question</h2></div>
-      <button className="hc-button hc-icon-button" type="button" aria-label="Close question" onClick={onClose}>✕</button>
+  const lead = text.trim().split(/(?<=[.!?])\s+/).filter((part) => !part.endsWith('?')).join(' ');
+  return <section className="hc-modal hc-modal--question" aria-labelledby="hc-modal-title">
+    <header className="hc-question-head">
+      <div className="hc-question-who">
+        <Portrait agent="mayor" round size={48} />
+        <div>
+          <h2 className="hc-modal-title" id="hc-modal-title">Mabel needs you</h2>
+          <span className="hc-needs"><IconWarn size={14} />FOUNDER NEEDED</span>
+        </div>
+        <button className="hc-icon-btn hc-icon-btn--small hc-question-close" type="button" aria-label="Close question" onClick={onClose}><IconClose size={14} /></button>
+      </div>
+      <blockquote className="hc-question">{choices.length && lead ? text.trim().split(/(?<=[.!?])\s+/).filter((part) => part.endsWith('?')).pop() : text}</blockquote>
+      <p className="hc-question-sub">{choices.length && lead ? lead : 'The Mayor waits on your answer. Everyone else keeps working.'}</p>
     </header>
-    <div className="hc-modal-body">
-      <blockquote className="hc-question">{text}</blockquote>
+    <div className="hc-question-body">
       {!canAnswer && <p className="hc-modal-note" data-tone="muted">Live controls are disabled while viewing a recording.</p>}
-      <label className="hc-question-label" htmlFor="hc-question-input">Your answer</label>
-      <input id="hc-question-input" className="hc-question-input" value={value} maxLength={1000} disabled={!canAnswer} placeholder="Answer the Mayor (optional)…" onChange={(e) => setValue(e.currentTarget.value)} />
+      {choices.length > 0 && <div className="hc-choices">
+        {choices.map((option) => {
+          const swatch = swatchFor(option);
+          return <button key={option} type="button" className="hc-choice" disabled={!canAnswer} onClick={() => void send(option)}>
+            {swatch && <span className="hc-swatch" style={{ background: swatch }} />}
+            <span>{option}</span>
+          </button>;
+        })}
+      </div>}
+      {choices.length > 0 && <div className="hc-or"><span>OR IN YOUR OWN WORDS</span></div>}
+      <div className="hc-answer-row">
+        <input id="hc-question-input" className="hc-input hc-input--lg" value={value} maxLength={1000} disabled={!canAnswer} placeholder="Tell the Mayor what you have in mind…" aria-label="Your answer"
+          onChange={(e) => { setValue(e.currentTarget.value); setError(null); }} onKeyDown={(e) => { if (e.key === 'Enter' && value.trim()) void send(value.trim()); }} />
+        <button className="hc-btn hc-btn--primary hc-btn--lg" type="button" disabled={!canAnswer || !value.trim()} onClick={() => void send(value.trim())}>Send</button>
+      </div>
+      {error && <p className="hc-modal-note" data-tone="err" role="alert">{error}</p>}
+      <p className="hc-question-hint"><span>Esc to answer later. The toast stays until you do.</span>
+        <button className="hc-ghost" type="button" disabled={!canAnswer} onClick={() => void send('')}>Skip this question</button></p>
     </div>
-    <footer className="hc-modal-foot">
-      <button className="hc-button" type="button" disabled={!canAnswer} title={canAnswer ? undefined : 'Live controls are disabled while viewing a recording.'} onClick={() => void send('')}>Skip</button>
-      <button className="hc-button hc-button--primary" type="button" disabled={!canAnswer || !value.trim()} title={canAnswer ? undefined : 'Live controls are disabled while viewing a recording.'} onClick={() => void send(value.trim())}>Send answer</button>
-    </footer>
   </section>;
 }
 
-export function FinalCard({ replaySrc, onClose }: { replaySrc: string; onClose(): void }) {
+const LONG_LABEL = { research: 'Research brief', site: 'Landing site', launch_kit: 'Launch kit', brief: 'Founder brief' } as const;
+const CONFETTI: readonly (readonly [string, number, number, number, number])[] = [
+  ['mayor', 520, 18, -20, 6], ['scout', 560, 40, 3, 8], ['maker', 600, 14, 26, 6], ['herald', 640, 34, -11, 8], ['mayor', 672, 22, 12, 6],
+  ['maker', 486, 38, 35, 8], ['scout', 448, 14, -2, 6], ['herald', 410, 32, 21, 8], ['mayor', 360, 16, -16, 6],
+];
+
+function firstParagraph(markdown: string): string {
+  const para = markdown.split(/\n{2,}/).map((part) => part.trim()).find((part) => part && !/^(#|[-*>\d])/.test(part));
+  const plain = (para ?? '').replace(/[*_`#>]/g, '').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/\s+/g, ' ').trim();
+  return plain.length > 340 ? `${plain.slice(0, 337)}…` : plain;
+}
+
+export function FinalCard({ replaySrc, onReplay, onOpenArtifact, onClose }: { replaySrc: string; onReplay(src: string): void; onOpenArtifact(artifactId: string): void; onClose(): void }) {
   const state = useStore((s) => s.state);
   const events = useStore((s) => s.events);
   const mode = useStore((s) => s.mode);
@@ -201,48 +233,72 @@ export function FinalCard({ replaySrc, onClose }: { replaySrc: string; onClose()
   const briefId = briefMeta?.id ?? null;
   useEffect(() => { if (briefId) return loadArtifact(briefId, setLoad); setLoad({ kind: 'error', message: 'no-brief' }); return undefined; }, [briefId]);
   const siteArtifact = Object.values(state.artifacts).find((a) => a.kind === 'site');
-  const candidateUrl = completed && completed.type === 'run.completed' ? completed.data.siteUrl ?? siteArtifact?.url ?? null : siteArtifact?.url ?? null;
+  const illustrative = mode === 'replay' && isIllustrativeRecording(replaySrc);
+  const candidateUrl = illustrative ? null : completed && completed.type === 'run.completed' ? completed.data.siteUrl ?? siteArtifact?.url ?? null : siteArtifact?.url ?? null;
   const urlKind = publicUrlKind(candidateUrl);
-  const deliverables = Object.values(state.artifacts).filter((a) => a.kind !== 'brief');
+  const deliverables = Object.values(state.tasks).filter((task) => task.def.enabled && task.status !== 'skipped');
   const stats = completed && completed.type === 'run.completed' ? completed.data.stats : null;
-  const watchAgain = () => { if (state.runId) useStore.getState().openReplay(mode === 'replay' ? replaySrc : state.runId, 1); };
-  return <section className="hc-modal hc-modal--final">
-    <header className="hc-modal-head">
-      <div>
-        <h2 className="hc-modal-title" id="hc-modal-title">{state.title || 'Run complete'}</h2>
-        <p className="hc-modal-summary">The company finished its work. Here is what it produced{state.mode === 'mock' ? ' in mock mode' : ''}.</p>
-      </div>
-      <button className="hc-button hc-icon-button" type="button" aria-label="Close final card" onClick={onClose}>✕</button>
+  const accepted = deliverables.filter((task) => task.status === 'accepted').length;
+  const unreportedCredits = state.mode === 'live' && ['scout', 'maker', 'herald'].some((agent) =>
+    events.some((e) => e.type === 'task.started' && e.data.agent === agent) &&
+    !events.some((e) => e.type === 'payroll.tick' && e.data.agent === agent && e.data.credits != null));
+  const watchAgain = () => { if (state.runId) onReplay(mode === 'replay' ? replaySrc : state.runId); };
+  const brief = load.kind === 'ok' && load.artifact.kind === 'brief' ? (load.artifact.payload as BriefPayload) : null;
+  const summary = brief ? firstParagraph(brief.markdown) : '';
+  const seconds = Math.max(0, Math.round((stats ? stats.minutes * 60 : state.t / 1000)));
+  const runTime = stats && stats.minutes && state.t === 0 ? `${stats.minutes} min` : `${Math.floor(state.t / 60000)}m ${String(Math.floor(state.t / 1000) % 60).padStart(2, '0')}s`;
+  const host = candidateUrl ? candidateUrl.replace(/^https?:\/\//, '').replace(/\/$/, '') : null;
+  return <section className="hc-modal hc-modal--final" aria-labelledby="hc-modal-title">
+    {CONFETTI.map(([who, left, top, rot, size], index) => <span key={index} className="hc-confetti" aria-hidden="true"
+      style={{ left, top, width: size, height: size, rotate: `${rot}deg`, background: `var(--${who})` }} />)}
+    <header className="hc-final-head">
+      <span className="hc-kicker">FOUNDER BRIEF · {state.runId ?? 'RUN'}</span>
+      <h2 className="hc-final-title" id="hc-modal-title">{state.title ? `${state.title} is open.` : 'Run complete.'}</h2>
+      <p className="hc-final-summary">{summary || (illustrative ? 'Illustrative fixture: sample deliverables and payroll.' : `The company finished its work${state.mode === 'mock' ? ' in mock mode' : ''}.`)}</p>
+      <button className="hc-icon-btn hc-icon-btn--small hc-final-close" type="button" aria-label="Close final card" onClick={onClose}><IconClose size={14} /></button>
     </header>
-    <div className="hc-modal-body">
-      {stats && <dl className="hc-final-stats">
-        <div><dt>Tasks accepted</dt><dd>{stats.tasks}</dd></div>
-        <div><dt>Handoffs</dt><dd>{stats.handoffs}</dd></div>
-        <div><dt>Revisions</dt><dd>{stats.revisions}</dd></div>
-        <div><dt>Minutes</dt><dd>{stats.minutes}</dd></div>
-        <div><dt>Credits</dt><dd>{stats.credits.toFixed(2)}</dd></div>
-        <div><dt>Cost</dt><dd>${stats.usd.toFixed(2)}</dd></div>
-      </dl>}
-      {candidateUrl && urlKind !== 'local' && urlKind !== 'none'
-        ? <figure className="hc-qr-figure hc-qr-figure--final">
-          <QrCode value={candidateUrl} />
-          <figcaption>{urlKind === 'public' ? `Scan to open ${candidateUrl}` : `On venue Wi-Fi: ${candidateUrl}`}</figcaption>
-        </figure>
-        : <p className="hc-local-note" data-tone="muted">{candidateUrl ? 'Site link is local-only for now — it works on this machine, and a public QR appears once a public URL is configured.' : 'No site URL was produced for this run.'}</p>}
-      {load.kind === 'ok' && load.artifact.kind === 'brief' && <div className="hc-final-brief">
-        <h3 className="hc-section-title">Founder brief</h3>
-        <Markdown text={(load.artifact.payload as BriefPayload).markdown} />
-        <ol className="hc-viewer-list">{(load.artifact.payload as BriefPayload).nextSteps.map((step) => <li key={step}>{step}</li>)}</ol>
-      </div>}
-      {(load.kind === 'loading' || load.kind === 'error' || (load.kind === 'ok' && load.artifact.kind !== 'brief')) && <div className="hc-final-brief">
-        <h3 className="hc-section-title">{load.kind === 'loading' ? 'Founder brief is loading…' : 'Deliverables'}</h3>
-        <ul className="hc-viewer-list">{deliverables.map((a) => <li key={a.id}>{KIND_META[a.kind].icon} {a.title}</li>)}</ul>
-      </div>}
-      {state.t > 0 && <p className="hc-final-elapsed">Recorded length {formatClock(state.t)}.</p>}
+    <div className="hc-final-mid">
+      <div className="hc-final-list">
+        <span className="hc-kicker">DELIVERABLES · {accepted} OF {deliverables.length}</span>
+        {deliverables.map((task) => {
+          const artifact = task.artifactId ? state.artifacts[task.artifactId] : undefined;
+          const Icon = ARTIFACT_ICON[task.def.deliverable];
+          const owner = ROSTER[task.def.owner];
+          return <button key={task.def.id} type="button" className="hc-final-item" disabled={!artifact} onClick={() => artifact && onOpenArtifact(artifact.id)}>
+            <span className="hc-deliv-icon hc-deliv-icon--lg" style={{ borderColor: owner.color }}><Icon size={18} /></span>
+            <span className="hc-final-item-main"><strong>{LONG_LABEL[task.def.deliverable]}</strong><small>{owner.name} · {artifact?.title ?? task.def.title}</small></span>
+            <span className="hc-final-stamp"><StatusPill meta={pillFor(task.status)} stamp /></span>
+          </button>;
+        })}
+      </div>
+      <div className="hc-final-qr">
+        {candidateUrl && urlKind !== 'local' && urlKind !== 'none'
+          ? <>
+            <div className="hc-qr-card"><QrCode value={candidateUrl} size={168} /></div>
+            <a className="hc-final-host" href={candidateUrl} target="_blank" rel="noopener noreferrer">{host}</a>
+            <span className="hc-final-qr-note">{urlKind === 'public' ? 'Scan to open on your phone.' : 'Venue Wi-Fi only — not on cellular.'}</span>
+          </>
+          : <p className="hc-local-note" data-tone="muted">{illustrative ? 'This fixture has a local site preview. Sample addresses are not published sites.' : candidateUrl ? 'Site link is local-only for now — a public QR appears once a public URL is configured.' : 'No site URL was produced for this run.'}</p>}
+      </div>
     </div>
-    <footer className="hc-modal-foot">
-      <button className="hc-button" type="button" onClick={onClose}>Close</button>
-      <button className="hc-button hc-button--primary" type="button" disabled={!state.runId} onClick={watchAgain}>{mode === 'replay' ? 'Watch again' : 'Replay this run'}</button>
+    <dl className="hc-final-stats">
+      <div><dt>PAYROLL</dt><dd>{stats ? `${stats.credits.toFixed(0)} cr · $${stats.usd.toFixed(2)}` : `${state.payroll.credits.toFixed(0)} cr · $${state.payroll.usd.toFixed(2)}`}</dd></div>
+      <div><dt>RUN TIME</dt><dd>{state.t > 0 ? runTime : `${seconds}s`}</dd></div>
+      <div><dt>TASKS</dt><dd>{accepted} of {deliverables.length} accepted</dd></div>
+    </dl>
+    {unreportedCredits && <p className="hc-local-note hc-final-note">CREAO has not reported all credit usage. Cost totals include reported usage only.</p>}
+    {brief && <details className="hc-final-brief">
+      <summary>Read the full founder brief</summary>
+      <Markdown text={brief.markdown} />
+      <ol className="hc-viewer-list">{brief.nextSteps.map((step) => <li key={step}>{step}</li>)}</ol>
+    </details>}
+    {load.kind === 'error' && briefId && <p className="hc-modal-note hc-final-note" data-tone="err" role="alert">{load.message}</p>}
+    <footer className="hc-final-foot">
+      <span>{illustrative ? 'Illustrative fixture. ' : ''}Run saved. Replay it any time from the timeline.{state.t > 0 ? ` Length ${formatClock(state.t)}.` : ''}</span>
+      <div className="hc-modal-foot-actions">
+        <button className="hc-btn hc-btn--lg" type="button" disabled={!state.runId} onClick={watchAgain}><IconReplay size={14} />{mode === 'replay' ? 'Watch again' : 'Replay run'}</button>
+        {candidateUrl && urlKind !== 'none' && <a className="hc-btn hc-btn--primary hc-btn--lg" href={candidateUrl} target="_blank" rel="noopener noreferrer">Open site<IconExternal size={14} /></a>}
+      </div>
     </footer>
   </section>;
 }

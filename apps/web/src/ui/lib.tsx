@@ -62,6 +62,51 @@ export const KIND_META: Record<ArtifactKind, { icon: string; label: string }> = 
   brief: { icon: '🧠', label: 'Brief' },
 };
 
+export const DELIVERABLE_LABEL: Record<ArtifactKind, string> = { research: 'Research', site: 'Site', launch_kit: 'Launch', brief: 'Brief' };
+
+export type PillMeta = { tone: StatusTone; word: string; icon: 'check' | 'hourglass' | 'bang' | 'dot' | 'ring' };
+/** Status pill content for a deliverable's task: always an icon plus a word, never color alone (HC-N-033). */
+export function pillFor(status: TaskStatus | null | undefined): PillMeta {
+  switch (status) {
+    case 'accepted': return { tone: 'ok', word: 'accepted', icon: 'check' };
+    case 'submitted': case 'under_review': return { tone: 'warn', word: 'in review', icon: 'hourglass' };
+    case 'revising': return { tone: 'warn', word: 'revising', icon: 'hourglass' };
+    case 'failed': return { tone: 'err', word: 'failed', icon: 'bang' };
+    case 'working': case 'dispatched': case 'covered': return { tone: 'info', word: 'working', icon: 'dot' };
+    case 'skipped': return { tone: 'muted', word: 'skipped', icon: 'ring' };
+    default: return { tone: 'muted', word: 'waiting', icon: 'ring' };
+  }
+}
+
+/** The town's storybook clock: a run starts at 9:00 and one real second is twenty town seconds. */
+export function simClock(ms: number): string {
+  const minutes = 9 * 60 + Math.floor(Math.max(0, ms) / 1000 * 20 / 60);
+  return `${Math.floor(minutes / 60) % 24}:${String(minutes % 60).padStart(2, '0')}`;
+}
+
+/** "Pink or midnight blue?" → ['Pink', 'Midnight blue']. Returns [] when the question is open-ended. */
+export function parseChoices(text: string): string[] {
+  const sentence = text.trim().split(/(?<=[.!?])\s+/).filter((part) => part.endsWith('?')).pop();
+  if (!sentence || !/\bor\b/i.test(sentence)) return [];
+  const body = sentence.replace(/\?$/, '');
+  const orAt = body.search(/\s+or\s+/i);
+  const last = body.slice(orAt).replace(/^\s+or\s+/i, '');
+  // Everything before "or", from the last colon or comma-delimited list start.
+  const head = body.slice(0, orAt).split(/[:;]/).pop() ?? '';
+  const parts = head.split(',').map((part) => part.trim());
+  const options = [...(parts.length > 1 ? parts : [parts[0]]), last].map((option) => option.trim().replace(/^(?:a|an|the)\s+/i, '')).filter(Boolean);
+  // A long head ("Juno wants a color for the site, pink") is a lead-in, not an option.
+  const trimmed = options.length === 3 && options[0].split(' ').length > 4 ? options.slice(1) : options;
+  if (trimmed.length < 2 || trimmed.length > 3 || trimmed.some((option) => option.length > 32 || option.split(' ').length > 4)) return [];
+  return trimmed.map((option) => option[0].toUpperCase() + option.slice(1));
+}
+
+const SWATCHES: Record<string, string> = {
+  pink: '#F2A7C3', 'midnight blue': '#1F2A5A', blue: '#3D7DD8', navy: '#1F2A5A', green: '#3E9B57', red: '#D64545',
+  orange: '#F08A3C', purple: '#8C6CF2', yellow: '#F2C94C', teal: '#3FB8AF', cream: '#F6EFE1', black: '#1D1A2B', white: '#FFFFFF',
+};
+export const swatchFor = (option: string): string | null => SWATCHES[option.toLowerCase()] ?? null;
+
 export function taskStatusMeta(status: TaskStatus): { icon: string; word: string; tone: StatusTone } {
   switch (status) {
     case 'accepted': return { icon: '✓', word: 'accepted', tone: 'ok' };
@@ -79,6 +124,12 @@ export function taskStatusMeta(status: TaskStatus): { icon: string; word: string
 }
 
 export type UrlKind = 'none' | 'local' | 'lan' | 'public';
+export const ILLUSTRATIVE_RECORDINGS=['fixture:golden-boba','fixture:failure-retry','fixture:redirect'];
+export const isIllustrativeRecording=(source:string)=>ILLUSTRATIVE_RECORDINGS.includes(source);
+
+export function safeWebHref(value:string):string|undefined {
+  try {const url=new URL(value);return ['http:','https:'].includes(url.protocol)?url.href:undefined;}catch{return undefined;}
+}
 
 export function publicUrlKind(url: string | null | undefined): UrlKind {
   if (!url) return 'none';
@@ -86,6 +137,7 @@ export function publicUrlKind(url: string | null | undefined): UrlKind {
   try { parsed = new URL(url); } catch { return 'none'; }
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return 'none';
   const host = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  if (host.endsWith('.invalid') || host.endsWith('.example') || ['example.com','example.net','example.org'].some(example => host === example || host.endsWith(`.${example}`))) return 'none';
   if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0' || host === '::1' || host.endsWith('.localhost')) return 'local';
   if (/^(10\.|127\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host) || host.endsWith('.local')) return 'lan';
   return 'public';

@@ -1,3 +1,4 @@
+/* Design tokens — values are normative (PRD §10.2) and mirror the Paper file's token set. */
 :root {
   --ink: #1D1A2B;
   --ink-2: #3A3550;
@@ -18,6 +19,13 @@
   --radius-sm: 6px;
   --gap: 12px;
   --night: rgba(40, 32, 96, .35);
+
+  /* Status ink: darker text tones that stay legible on their own tint (always paired with icon + word). */
+  --ok-ink: #2C7A41;
+  --warn-ink: #7D5506;
+  --info-ink: #245BAE;
+  --err-ink: #A12E2E;
+
   --font-ui: 'IBM Plex Sans', system-ui, sans-serif;
   --font-pixel: 'Pixelify Sans', 'Courier New', monospace;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
