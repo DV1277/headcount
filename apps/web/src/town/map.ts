@@ -33,8 +33,9 @@ export const SIM_SPAWN_POINTS: Readonly<Record<AgentId, TownPoint>> = {
   herald: { x: 32, y: 17 }, founder: { x: 7, y: 17 },
 };
 
-// Deliverable slots on City Hall's front steps (17–23, y 6): six tile-sized picks.
-export const HALL_STEP_SLOTS: readonly TownPoint[] = [17, 18, 19, 20, 21, 22].map((x) => ({ x, y: 6 }));
+// Current research, site, launch kit and brief. Leave two tiles between stamps
+// so verdicts remain legible; earlier drafts stay in the artifact history.
+export const HALL_STEP_SLOTS: readonly TownPoint[] = [17, 19, 21, 23].map((x) => ({ x, y: 6 }));
 // Per-agent idle perches, all inside the plaza zone, each on a clear straight
 // lane to the plaza center so waypoint paths can reach (and leave) them.
 export const PLAZA_PERCHES: Readonly<Record<AgentId, TownPoint>> = {

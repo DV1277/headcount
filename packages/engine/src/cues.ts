@@ -52,6 +52,9 @@ export function deriveCues(prev: TownState, e: EventEnvelope): Cue[] {
       const task = prev.tasks[e.data.taskId];
       return task ? [{ kind: 'glow', building: BUILDING[task.def.owner], on: true, color: COLOR[task.def.owner] }] : [];
     }
+    // A validated revision is accepted without a second Mayor review. Its
+    // completion event must still update the visible deliverable stamp.
+    case 'task.completed': return [{ kind: 'stamp', artifactId: e.data.artifactId, verdict: 'accept' }];
     case 'task.failed': {
       const task = prev.tasks[e.data.taskId];
       return task ? [{ kind: 'alert', building: BUILDING[task.def.owner], on: true, tone: 'error' }, { kind: 'bubble', agent: task.def.owner, text: e.data.error.message, priority: 3 }] : [];

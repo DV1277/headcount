@@ -4,10 +4,20 @@ import { DOOR_ANCHORS, mapTile, PLAZA, PLAZA_PERCHES, SIM_SPAWN_POINTS, tileBloc
 // Waypoint graph per PRD §10.6: nodes at every door, spawn, road junction, the
 // plaza center and the per-agent plaza perches. Edges are straight lanes whose
 // tiles are streets or open plaza (fountain excluded). BFS over nodes; no tile
-// level pathfinding.
+// level pathfinding. Buildings whose doors face north (post, home) park Sims
+// one tile north of the door so the doorway stays clear of the facade.
 
 const key = (p: TownPoint) => `${p.x},${p.y}`;
 const point = (x: number, y: number): TownPoint => ({ x, y });
+
+/** Where a Sim parks in front of `building` (door itself or one safe step away). */
+export const DOOR_PARK: Readonly<Record<Exclude<BuildingId, 'plaza'>, TownPoint>> = {
+  hall: { x: 20, y: 6 },      // south facade: step down into the street lane
+  library: { x: 7, y: 8 },    // south facade: step down into the footpath
+  workshop: { x: 32, y: 8 },  // south facade: step down into the footpath
+  post: { x: 32, y: 11 },     // north facade: stop on the lane above the door
+  home: { x: 7, y: 11 },      // north facade: stop on the lane above the door
+};
 
 const JUNCTIONS: readonly TownPoint[] = [
   point(0, 10), point(39, 10),
@@ -85,7 +95,7 @@ function neighbors(p: TownPoint): TownPoint[] {
 /** Where a walk targeting `building` parks for `agent` (perch for the plaza). */
 export function dockFor(building: BuildingId, agent: AgentId): TownPoint {
   if (building === 'plaza') return PLAZA_PERCHES[agent];
-  return DOOR_ANCHORS[building as Exclude<BuildingId, 'plaza'>];
+  return DOOR_PARK[building as Exclude<BuildingId, 'plaza'>];
 }
 
 /** Is `p` a registered graph node. */
@@ -101,12 +111,24 @@ export function nearestNode(p: TownPoint): TownPoint | null {
 }
 
 /**
- * Waypoint path between graph nodes (inclusive). Falls back to routing through
- * the nearest reachable node when `from` drifted off the graph (idle wander).
- * Returns `null` when the lane is truly cut off, so callers can fade-teleport.
+ * Waypoint path between graph nodes (inclusive), through the nearest reachable
+ * node when `from` drifted off the graph (idle wander). When `to` is a port
+ * tile next to the graph (park step or perch wing), the path routes to a
+ * connected node and closes with the straight final step. Returns `null` when
+ * truly cut off, so callers can fade-teleport instead.
  */
 export function walkPath(from: TownPoint, to: TownPoint): TownPoint[] | null {
   if (from.x === to.x && from.y === to.y) return [from];
+  let goal = to;
+  const suffix: TownPoint[] = [];
+  if (!NODE_SET.has(key(to))) {
+    const entry = NODES
+      .filter((n) => laneWalkable(to, n))
+      .sort((a, b) => (Math.abs(a.x - from.x) + Math.abs(a.y - from.y)) - (Math.abs(b.x - from.x) + Math.abs(b.y - from.y)))[0];
+    if (!entry) return null;
+    suffix.push(to);
+    goal = entry;
+  }
   let start = from;
   const prefix: TownPoint[] = [from];
   if (!NODE_SET.has(key(from))) {
@@ -115,31 +137,34 @@ export function walkPath(from: TownPoint, to: TownPoint): TownPoint[] | null {
     prefix.push(snapped);
     start = snapped;
   }
-  if (start.x === to.x && start.y === to.y) return prefix;
+  if (start.x === goal.x && start.y === goal.y) {
+    return suffix.length > 0 ? [...prefix, ...suffix] : prefix;
+  }
   const prev = new Map<string, string | null>([[key(start), null]]);
   const order: TownPoint[] = [start];
   let head = 0;
+  let found = false;
   while (head < order.length) {
     const current = order[head++];
-    if (current.x === to.x && current.y === to.y) {
-      const reversed: TownPoint[] = [];
-      let cursor: string | null = key(current);
-      while (cursor) {
-        const [x, y] = cursor.split(',').map(Number);
-        reversed.push(point(x, y));
-        cursor = prev.get(cursor) ?? null;
-      }
-      const path = reversed.reverse();
-      path.shift(); // drop the snapped start (already present in `prefix` tail)
-      return [...prefix, ...path];
-    }
+    if (current.x === goal.x && current.y === goal.y) { found = true; break; }
     for (const next of neighbors(current)) {
       if (prev.has(key(next))) continue;
       prev.set(key(next), key(current));
       order.push(next);
     }
   }
-  return null;
+  if (!found) return null;
+  const current = order[head - 1];
+  const reversed: TownPoint[] = [];
+  let cursor: string | null = key(current);
+  while (cursor) {
+    const [x, y] = cursor.split(',').map(Number);
+    reversed.push(point(x, y));
+    cursor = prev.get(cursor) ?? null;
+  }
+  const path = reversed.reverse();
+  path.shift(); // drop the snapped start; it is already the `prefix` tail
+  return [...prefix, ...path, ...suffix];
 }
 
 /** Emission check for tests and safety assertions: every lane stays on graph. */
