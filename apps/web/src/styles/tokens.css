@@ -1,0 +1,24 @@
+:root {
+  --ink: #1D1A2B;
+  --ink-2: #3A3550;
+  --paper: #F6EFE1;
+  --paper-2: #EADFC8;
+  --line: rgba(29, 26, 43, .14);
+  --shadow: 0 8px 24px rgba(29, 26, 43, .18);
+  --mayor: #F2B544;
+  --scout: #3FB8AF;
+  --maker: #FF6B5A;
+  --herald: #8C6CF2;
+  --founder: #F6EFE1;
+  --ok: #3E9B57;
+  --warn: #D99A1E;
+  --err: #D64545;
+  --info: #3D7DD8;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --gap: 12px;
+  --night: rgba(40, 32, 96, .35);
+  --font-ui: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-pixel: 'Pixelify Sans', 'Courier New', monospace;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}

@@ -64,13 +64,43 @@ export async function getAppRun(runId) {
   return request(`${appBase()}/${encodeURIComponent(runId)}`, { headers: appAuth() });
 }
 
-export async function waitForAppRun(runId, { intervalMs = 5000, timeoutMs = 15 * 60_000, onTick } = {}) {
-  return poll(() => getAppRun(runId), runId, { intervalMs, timeoutMs, onTick });
+export async function waitForAppRun(runId, { intervalMs = 5000, timeoutMs = 15 * 60_000, onTick, signal } = {}) {
+  return poll(() => getAppRun(runId), runId, { intervalMs, timeoutMs, onTick, signal });
 }
 
-async function poll(fetchRun, runId, { intervalMs, timeoutMs, onTick }) {
+// ---- App-scoped path with explicit per-app id/trigger key (settled by the worker; the
+// shared CREAO_APP_KEY env above stays for the single-agent tools) ----
+const appRunUrl = (appId) => `https://agent.creao.ai/api/v1/apps/${encodeURIComponent(appId)}/runs`;
+
+/** Trigger one app by id with one trigger key (prefix capi_). The caller resolves the per-role env. */
+export async function createAppRunWith(appId, key, inputs, { signal } = {}) {
+  if (!appId || !key) {
+    const missing = [!appId ? "CREAO_*_APP_ID" : "", !key ? "CREAO_*_APP_KEY" : ""].filter(Boolean).join(", ");
+    throw new Error(`Missing CREAO app configuration: ${missing}`);
+  }
+  return request(appRunUrl(appId), { method: "POST", headers: { Authorization: `Bearer ${key}` }, json: { inputs }, signal });
+}
+
+export async function getAppRunWith(appId, key, runId, { signal } = {}) {
+  if (!appId || !key) {
+    const missing = [!appId ? "CREAO_*_APP_ID" : "", !key ? "CREAO_*_APP_KEY" : ""].filter(Boolean).join(", ");
+    throw new Error(`Missing CREAO app configuration: ${missing}`);
+  }
+  return request(`${appRunUrl(appId)}/${encodeURIComponent(runId)}`, { headers: { Authorization: `Bearer ${key}` }, signal });
+}
+
+export async function waitForAppRunWith(appId, key, runId, { intervalMs = 5000, timeoutMs = 15 * 60_000, onTick, signal } = {}) {
+  return poll(() => getAppRunWith(appId, key, runId, { signal }), runId, { intervalMs, timeoutMs, onTick, signal });
+}
+
+async function poll(fetchRun, runId, { intervalMs, timeoutMs, onTick, signal }) {
   const deadline = Date.now() + timeoutMs;
   for (;;) {
+    if (signal?.aborted) {
+      const err = new Error(`CREAO run ${runId} aborted`);
+      err.name = "AbortError";
+      throw err;
+    }
     const run = await fetchRun();
     onTick?.(run);
     if (TERMINAL.has(run?.status)) return run;
