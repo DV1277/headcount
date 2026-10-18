@@ -1,0 +1,70 @@
+/** Read-only sponsor/site verification. Never triggers an agent or assumes phone proof. */
+import assert from 'node:assert/strict';
+import {readFile,writeFile} from 'node:fs/promises';
+import {fileURLToPath} from 'node:url';
+import {join,resolve} from 'node:path';
+import {ArtifactSchema,ArtifactSchemas,EventEnvelopeSchema,type Artifact} from '@hc/contracts';
+import {checkInvariants,initialState,reduce} from '@hc/engine';
+import {SITE_CSP,sanitizeSiteHtml} from '../apps/server/src/sites';
+
+const root=fileURLToPath(new URL('..',import.meta.url));
+const id=process.argv[2];
+assert(id&&/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,99}$/.test(id),'Provide a safe completed run id.');
+const dir=join(process.env.HC_RUNS_DIR?resolve(process.env.HC_RUNS_DIR):join(root,'runs'),id);
+const events=(await readFile(join(dir,'events.jsonl'),'utf8')).trim().split(/\r?\n/).map(line=>EventEnvelopeSchema.parse(JSON.parse(line)));
+assert.deepEqual(checkInvariants(events),[],'Event invariants must pass.');
+assert(events.every(e=>e.runId===id),'Events belong to one run.');
+const state=events.reduce(reduce,initialState());
+assert.equal(state.mode,'live');assert.equal(state.status,'completed');
+assert.equal(events.at(-1)?.type,'run.completed');
+const proposal=[...events].reverse().find(e=>e.type==='plan.proposed');
+assert(proposal?.type==='plan.proposed'&&proposal.data.source!=='template','A real Step 5 plan is required.');
+assert(!events.some(e=>e.type==='task.dispatched'&&e.data.via==='mayor-cover'),'A covered run does not pass real G2.');
+const tasks=Object.values(state.tasks).filter(t=>t.def.enabled);
+assert(['scout','maker','herald'].every(owner=>tasks.some(t=>t.def.owner===owner)));
+const artifacts:Artifact[]=[];
+for(const task of tasks){
+  assert.equal(task.status,'accepted',`${task.def.owner} must be accepted.`);
+  assert(task.artifactId);
+  const a=ArtifactSchema.parse(JSON.parse(await readFile(join(dir,'artifacts',`${task.artifactId}.json`),'utf8')));
+  assert.equal(a.runId,id);assert.equal(a.taskId,task.def.id);
+  assert(a.via==='creao-async'||a.via==='creao-realtime','Every department output must come from CREAO.');
+  assert.equal(events.filter(e=>e.type==='review.verdict'&&e.data.taskId===task.def.id).length,1);
+  assert(events.some(e=>e.type==='task.started'&&e.data.taskId===task.def.id&&e.data.externalRunId),'Observed upstream run id required.');
+  artifacts.push(a);
+}
+const research=artifacts.find(a=>a.kind==='research')!;
+assert(research.kind==='research');
+const researchPayload=ArtifactSchemas.research.parse(research.payload);
+assert(new Set(researchPayload.competitors.map(c=>c.name.toLowerCase())).size>=3,'At least three distinct researched competitors required.');
+const site=artifacts.find(a=>a.kind==='site')!;assert(site.kind==='site'&&site.url);
+const sitePayload=ArtifactSchemas.site.parse(site.payload);
+const publicUrl=new URL(site.url);
+assert.equal(publicUrl.protocol,'https:');
+assert(!/localhost|\.invalid$|\.example$|^127\.|^10\.|^192\.168\./.test(publicUrl.hostname),'A public site URL is required.');
+const kit=artifacts.find(a=>a.kind==='launch_kit')!;assert(kit.kind==='launch_kit');
+const kitPayload=ArtifactSchemas.launch_kit.parse(kit.payload);
+for(const text of [...Object.values(kitPayload.posts),...kitPayload.emails.map(e=>e.body)])assert(text.includes(site.url),'Every launch post/email must include the exact site URL.');
+assert.equal(sanitizeSiteHtml(sitePayload.html),sitePayload.html);
+assert(Buffer.byteLength(sitePayload.html)<=120*1024);
+assert(sitePayload.html.includes('Built by Headcount: 1'));
+assert(/name=["']viewport["']/.test(sitePayload.html));
+for(const owner of ['maker','herald'])assert(state.handoffs.some(h=>h.to===owner&&h.artifactId===research.id),'Both workers must receive the accepted research.');
+const intervals=['maker','herald'].map(owner=>{
+  const task=tasks.find(t=>t.def.owner===owner)!;
+  return [events.find(e=>e.type==='task.dispatched'&&e.data.taskId===task.def.id)!.t,[...events].reverse().find(e=>e.type==='task.completed'&&e.data.taskId===task.def.id)!.t];
+});
+assert(Math.max(...intervals.map(i=>i[0]))<Math.min(...intervals.map(i=>i[1])),'Maker and Herald must overlap.');
+const response=await fetch(site.url,{signal:AbortSignal.timeout(15000)});
+assert.equal(response.status,200);assert.equal(response.headers.get('content-security-policy'),SITE_CSP);
+assert.equal(await response.text(),sitePayload.html,'Public page must equal the sanitized artifact.');
+for(const path of ['/api/health','/api/runs'])assert.equal((await fetch(new URL(path,publicUrl),{signal:AbortSignal.timeout(15000)})).status,404);
+const brief=Object.values(state.artifacts).find(a=>a.kind==='brief');assert(brief);
+ArtifactSchema.parse(JSON.parse(await readFile(join(dir,'artifacts',`${brief.id}.json`),'utf8')));
+const creditReports=['scout','maker','herald'].map(agent=>events.some(e=>e.type==='payroll.tick'&&e.data.agent===agent&&e.data.credits!=null));
+let phoneCellularCheck:Record<string,unknown>={status:'pending'};
+try {const previous=JSON.parse(await readFile(join(root,'docs/status/G2-validation.json'),'utf8'));if(previous.runId===id&&previous.phoneCellularCheck?.status==='passed')phoneCellularCheck=previous.phoneCellularCheck;}catch{}
+const report={checkedAt:new Date().toISOString(),runId:id,technicalChecks:'passed',phoneCellularCheck,planSource:proposal.data.source,events:events.length,tasks:tasks.length,competitors:researchPayload.competitors.map(c=>({name:c.name,url:c.url})),sources:researchPayload.sources.length,siteUrl:site.url,siteBytes:Buffer.byteLength(sitePayload.html),handoffs:state.handoffs.length,revisions:events.filter(e=>e.type==='task.revising').length,reportedUsd:state.payroll.usd,creaoCreditUsageComplete:creditReports.every(Boolean),externalRuns:events.flatMap(e=>e.type==='task.started'&&e.data.externalRunId?[{agent:e.data.agent,id:e.data.externalRunId}]:[])};
+await writeFile(join(root,'docs/status/G2-validation.json'),JSON.stringify(report,null,2)+'\n');
+console.log(JSON.stringify(report,null,2));
+console.log(phoneCellularCheck.status==='passed'?'G2 checks passed, including the recorded founder phone confirmation.':'Technical G2 checks passed. Physical phone/cellular QR proof still requires founder confirmation.');

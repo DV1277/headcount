@@ -15,6 +15,7 @@
     "check": "node --env-file-if-exists=.env scripts/check-keys.mjs",
     "check:deep": "node --env-file-if-exists=.env scripts/check-keys.mjs --deep",
     "dev": "npm run dev --workspace @hc/web",
+    "demo": "npm run dev --workspace @hc/web -- --port 5173 --strictPort --open '/?replay=fixture:live-boba-g2&speed=20'",
     "dev:server": "npm run dev --workspace @hc/server",
     "build": "npm run build --workspace @hc/web",
     "preview": "npm run preview --workspace @hc/web",
@@ -23,6 +24,7 @@
     "smoke": "node --import tsx scripts/smoke.ts",
     "smoke:foundation": "node --import tsx scripts/smoke-foundation.ts",
     "record": "node --import tsx scripts/record.ts",
+    "verify:real": "node --env-file-if-exists=.env --import tsx scripts/verify-real-run.ts",
     "scan:secrets": "node scripts/scan-secrets.mjs"
   },
   "devDependencies": {

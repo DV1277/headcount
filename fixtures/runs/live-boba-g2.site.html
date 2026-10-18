@@ -1,0 +1,388 @@
+
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Midnight Boba — Late-Night Boba to UCLA Dorms</title>
+<style>
+  :root{
+    --espresso:#2a1810;
+    --espresso-2:#3d2418;
+    --amber:#e8a33d;
+    --amber-soft:#f3c56b;
+    --cream:#f7efe3;
+    --taro:#7c5cbf;
+    --night:#191a2b;
+    --ink:#241a14;
+    --muted:#6b5b4e;
+  }
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    margin:0;
+    background:var(--cream);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji",sans-serif;
+    font-size:17px;
+    line-height:1.6;
+  }
+  .wrap{width:100%;max-width:1080px;margin:0 auto;padding:0 20px;}
+  a{color:inherit;}
+  h1,h2,h3{line-height:1.15;margin:0 0 12px;letter-spacing:-0.01em;}
+  h2{font-size:1.55rem;}
+  h3{font-size:1.05rem;margin-bottom:6px;}
+  p{margin:0 0 14px;}
+
+  /* ---------- HERO ---------- */
+  .hero{
+    background:
+      radial-gradient(120% 90% at 85% 0%, rgba(124,92,191,.55) 0%, rgba(25,26,43,0) 60%),
+      radial-gradient(90% 70% at 10% 100%, rgba(232,163,61,.35) 0%, rgba(25,26,43,0) 55%),
+      var(--night);
+    color:#fdf6ea;
+    padding:52px 0 44px;
+    position:relative;
+    overflow:hidden;
+  }
+  .hero:after{
+    content:"";
+    position:absolute;
+    right:-70px;top:-70px;
+    width:230px;height:230px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, rgba(247,239,227,.9), rgba(232,163,61,.75) 42%, rgba(61,36,24,.9) 78%);
+    opacity:.5;
+  }
+  .badge{
+    display:inline-block;
+    font-size:.72rem;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    font-weight:700;
+    color:var(--night);
+    background:var(--amber-soft);
+    border-radius:999px;
+    padding:6px 12px;
+    margin-bottom:18px;
+  }
+  .hero h1{
+    font-size:2.05rem;
+    max-width:16ch;
+    color:#fff8ec;
+  }
+  .hero .sub{
+    font-size:1.06rem;
+    max-width:44ch;
+    color:#e8dcc9;
+    margin-bottom:24px;
+  }
+  .cta{
+    display:inline-block;
+    background:var(--amber);
+    color:var(--night);
+    font-weight:700;
+    text-decoration:none;
+    padding:14px 26px;
+    border-radius:999px;
+    box-shadow:0 10px 24px rgba(0,0,0,.28);
+    font-size:1.02rem;
+  }
+  .cta:hover,.cta:focus{background:var(--amber-soft);}
+  .hero-note{font-size:.82rem;color:#c9bba6;margin:16px 0 0;}
+
+  /* ---------- SECTIONS ---------- */
+  section{padding:44px 0;}
+  .alt{background:#fffaf1;border-top:1px solid #eadfcd;border-bottom:1px solid #eadfcd;}
+  .kicker{
+    font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+    font-weight:700;color:var(--taro);margin-bottom:8px;
+  }
+  .lead{color:var(--muted);max-width:60ch;}
+
+  .grid{display:grid;gap:18px;grid-template-columns:1fr;margin-top:22px;}
+  .card{
+    background:#fff;
+    border:1px solid #ece0cd;
+    border-radius:16px;
+    padding:20px;
+    box-shadow:0 2px 0 rgba(42,24,16,.05);
+  }
+  .num{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:32px;height:32px;border-radius:50%;
+    background:var(--espresso);color:var(--amber-soft);
+    font-weight:700;font-size:.95rem;margin-bottom:10px;
+  }
+  .step{border-left:3px solid var(--amber);padding-left:16px;}
+
+  /* ---------- PRICING ---------- */
+  .price{
+    background:#fff;border:1px solid #ece0cd;border-radius:16px;padding:20px;
+    display:flex;flex-direction:column;
+  }
+  .price.feature{border-color:var(--amber);border-width:2px;background:#fffdf7;}
+  .price .tag{
+    align-self:flex-start;font-size:.68rem;font-weight:700;letter-spacing:.12em;
+    text-transform:uppercase;background:var(--taro);color:#fff;border-radius:999px;
+    padding:4px 10px;margin-bottom:10px;
+  }
+  .amount{font-size:1.85rem;font-weight:800;color:var(--espresso);margin:0 0 2px;}
+  .amount span{font-size:.82rem;font-weight:600;color:var(--muted);}
+  .price ul{margin:12px 0 0;padding-left:18px;color:var(--muted);font-size:.94rem;}
+  .price li{margin-bottom:6px;}
+
+  /* ---------- MENU / AREAS ---------- */
+  .menu{display:grid;gap:12px;grid-template-columns:1fr;margin-top:18px;}
+  .item{
+    background:#fff;border:1px dashed #ddcdb5;border-radius:12px;padding:14px 16px;
+    display:flex;justify-content:space-between;gap:12px;align-items:baseline;
+  }
+  .item b{font-weight:700;}
+  .item .p{color:var(--espresso);font-weight:700;white-space:nowrap;}
+  .item small{display:block;color:var(--muted);font-weight:400;}
+
+  .areas{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;padding:0;list-style:none;}
+  .areas li{
+    background:#fff;border:1px solid #e3d6c1;border-radius:999px;
+    padding:8px 14px;font-size:.9rem;color:var(--espresso-2);
+  }
+  .hours{list-style:none;padding:0;margin:18px 0 0;}
+  .hours li{display:flex;justify-content:space-between;gap:14px;padding:11px 0;border-bottom:1px solid #ece0cd;}
+  .hours li:last-child{border-bottom:0;}
+  .hours b{color:var(--espresso);}
+
+  /* ---------- FAQ ---------- */
+  details{
+    background:#fff;border:1px solid #ece0cd;border-radius:12px;
+    padding:0;margin-bottom:12px;overflow:hidden;
+  }
+  summary{
+    cursor:pointer;font-weight:700;padding:16px 18px;list-style:none;
+    display:flex;justify-content:space-between;gap:14px;align-items:center;
+    color:var(--espresso);
+  }
+  summary::-webkit-details-marker{display:none;}
+  summary:after{content:"+";font-size:1.3rem;color:var(--amber);line-height:1;font-weight:700;}
+  details[open] summary:after{content:"\2013";}
+  details p{margin:0;padding:0 18px 18px;color:var(--muted);font-size:.96rem;}
+
+  /* ---------- SIGNUP ---------- */
+  .signup{
+    background:
+      radial-gradient(80% 120% at 100% 0%, rgba(124,92,191,.45), rgba(42,24,16,0) 60%),
+      var(--espresso);
+    color:#fdf6ea;
+  }
+  .signup h2{color:#fff8ec;}
+  .signup .lead{color:#ddcdb8;}
+  .formbox{
+    background:rgba(255,255,255,.07);
+    border:1px solid rgba(247,239,227,.25);
+    border-radius:16px;padding:20px;margin-top:20px;
+  }
+  label{display:block;font-size:.85rem;font-weight:700;letter-spacing:.04em;margin-bottom:8px;color:#f3e6d3;}
+  input[type=email]{
+    width:100%;padding:14px;border-radius:10px;border:1px solid rgba(247,239,227,.35);
+    background:#fff;color:var(--ink);font-size:1rem;font-family:inherit;
+  }
+  button{
+    margin-top:14px;width:100%;border:0;cursor:pointer;
+    background:var(--amber);color:var(--night);font-weight:700;font-size:1.02rem;
+    padding:15px;border-radius:10px;font-family:inherit;
+  }
+  button:hover,button:focus{background:var(--amber-soft);}
+  .fineprint{font-size:.8rem;color:#c9bba6;margin:14px 0 0;}
+
+  /* ---------- FOOTER ---------- */
+  footer{background:var(--night);color:#c9bba6;padding:30px 0;font-size:.85rem;}
+  footer .foot-row{display:flex;flex-direction:column;gap:10px;}
+  footer b{color:#fdf6ea;}
+  .proto{color:#e8a33d;font-weight:700;}
+
+  @media (min-width:768px){
+    body{font-size:18px;}
+    .hero{padding:80px 0 66px;}
+    .hero h1{font-size:3rem;max-width:18ch;}
+    .hero .sub{font-size:1.18rem;}
+    section{padding:66px 0;}
+    h2{font-size:2rem;}
+    .grid.cols-3{grid-template-columns:repeat(3,1fr);gap:22px;}
+    .menu{grid-template-columns:repeat(2,1fr);}
+    .pricing{grid-template-columns:repeat(3,1fr);}
+    .formbox{padding:28px;max-width:640px;}
+    footer .foot-row{flex-direction:row;justify-content:space-between;align-items:center;}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="badge">Prototype · Westwood late night</span>
+    <h1>Boba delivered to your dorm lobby at 1am</h1>
+    <p class="sub">A late-night boba run built for UCLA Hill residents, with a lobby handoff instead of a walk down to Gayley.</p>
+    <a class="cta" href="#signup">Join the prototype waitlist</a>
+    <p class="hero-note">This page is a concept preview. Midnight Boba is not operating yet — hours, pricing and service areas below are proposals open to feedback.</p>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">Why it exists</p>
+    <h2>Westwood goes quiet before the craving does</h2>
+    <p class="lead">Research on nearby shops shows the closest boba to campus closes around 11pm on weeknights, and the Hill requires every guest to be signed in at an access desk between 9pm and 5am. That leaves a real gap after midnight.</p>
+    <div class="grid cols-3">
+      <div class="card">
+        <h3>Open when others are not</h3>
+        <p>No Westwood boba shop reliably serves past midnight. A proposed 8pm–2am window targets the hours students told us they actually order.</p>
+      </div>
+      <div class="card">
+        <h3>Lobby handoff, not street drop</h3>
+        <p>UCLA housing rules require guests to be signed in at access desks after 9pm, so we meet you in the lobby — never at your room door.</p>
+      </div>
+      <div class="card">
+        <h3>Group-friendly by design</h3>
+        <p>Orders are built for the 2–4 person study or post-party group, so one delivery covers the whole room instead of four separate trips.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Three steps from craving to lobby</h2>
+    <div class="grid cols-3">
+      <div class="step">
+        <span class="num">1</span>
+        <h3>Order ahead</h3>
+        <p>Pick your drinks and a lobby window on the proposed 8pm–2am schedule.</p>
+      </div>
+      <div class="step">
+        <span class="num">2</span>
+        <h3>We text an ETA</h3>
+        <p>You get a heads-up before the runner leaves, so you can head down with your group.</p>
+      </div>
+      <div class="step">
+        <span class="num">3</span>
+        <h3>Meet in the lobby</h3>
+        <p>Collect your order at the access desk area — signed in and above board with housing rules.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">Proposed menu &amp; pricing</p>
+    <h2>Priced to match Westwood, not to undercut it</h2>
+    <p class="lead">Research put nearby milk teas between $6.25 and $8.15. These prototype tiers sit inside that band and include the delivery run.</p>
+    <div class="grid pricing">
+      <div class="price">
+        <p class="amount">$6.75 <span>/ drink</span></p>
+        Single cup
+        <ul>
+          <li>One 24oz milk tea or fruit tea</li>
+          <li>Standard toppings included</li>
+          <li>Lobby handoff</li>
+        </ul>
+      </div>
+      <div class="price feature">
+        <span class="tag">Best for groups</span>
+        <p class="amount">$6.25 <span>/ drink</span></p>
+        Four-cup study pack
+        <ul>
+          <li>Four drinks, one delivery</li>
+          <li>Lowest per-drink price</li>
+          <li>Built for 2–4 person rooms</li>
+        </ul>
+      </div>
+      <div class="price">
+        <p class="amount">$8.15 <span>/ drink</span></p>
+        Premium build
+        <ul>
+          <li>Brown sugar or taro specialty</li>
+          <li>Extra topping included</li>
+          <li>Matched to premium Westwood pricing</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3 style="margin-top:34px">Proposed menu</h3>
+    <div class="menu">
+      <div class="item"><span>Classic milk tea<small>Black tea, milk, tapioca</small></span><span class="p">$6.25–$6.75</span></div>
+      <div class="item"><span>Brown sugar boba milk<small>Caramelised syrup, fresh boba</small></span><span class="p">$8.15</span></div>
+      <div class="item"><span>Taro milk tea<small>Real taro, creamy base</small></span><span class="p">$8.15</span></div>
+      <div class="item"><span>Passion fruit green tea<small>Caffeine-light, fruit-forward</small></span><span class="p">$6.75</span></div>
+    </div>
+    <p class="fineprint" style="color:var(--muted)">Menu and prices are proposals for the pilot and will change once supply costs are confirmed.</p>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <p class="kicker">Proposed service area &amp; hours</p>
+    <h2>Where and when we would run</h2>
+    <p class="lead">These are the areas the pilot is scoped for. Nothing is confirmed until the waitlist tells us where demand actually is.</p>
+    <ul class="areas">
+      <li>De Neve Plaza</li>
+      <li>Rieber Hall</li>
+      <li>Sproul Hall</li>
+      <li>Hedrick Summit</li>
+      <li>Olympic Hall</li>
+      <li>Saxon Suites</li>
+      <li>Westwood apartments near Gayley</li>
+    </ul>
+    <ul class="hours">
+      <li>Sunday–Thursday<span>8:00pm – 1:00am (proposed)</span></li>
+      <li>Friday–Saturday<span>8:00pm – 2:00am (proposed)</span></li>
+      <li>Finals week<span>Extended to 3:00am (proposed)</span></li>
+    </ul>
+    <p class="fineprint" style="color:var(--muted)">Hours are a starting proposal, not a published schedule. They shift with demand and staffing.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">FAQ</p>
+    <h2>Questions students actually asked</h2>
+    <details>
+      <summary>Is this service running right now?</summary>
+      <p>No. This is a prototype landing page collecting interest before launch. Every price, hour and service area shown is a proposal, and no orders are being accepted yet.</p>
+    </details>
+    <details>
+      <summary>How does the dorm lobby handoff work with UCLA rules?</summary>
+      <p>UCLA on-campus housing requires guests to be signed in at an access desk between 9pm and 5am. The proposed model has the runner wait in the lobby area so you sign them in at the desk and collect your order there, rather than meeting at your room.</p>
+    </details>
+    <details>
+      <summary>Why is there a four-cup pack?</summary>
+      <p>Research shows late-night orders usually come from groups of two to four after studying or a night out. Batching those into one delivery keeps the per-drink price inside the $6.25–$8.15 range seen at nearby Westwood shops.</p>
+    </details>
+  </div>
+</section>
+
+<section class="signup" id="signup">
+  <div class="wrap">
+    <p class="kicker" style="color:var(--amber-soft)">Prototype waitlist</p>
+    <h2>Tell us you want this to exist</h2>
+    <p class="lead">Leave your email and we will send a short survey about which dorm and which hours matter most. This is a waitlist and feedback form only — it does not place an order and does not sign you up for a live service.</p>
+    <div class="formbox">
+      <form action="mailto:hello@example.com" method="post">
+        <label>Your email</label>
+        <input type="email" id="email" name="email" placeholder="you@ucla.edu" />
+        <button type="submit">Request a waitlist spot</button>
+        <p class="fineprint">Prototype waitlist — no payment, no order, no commitment. This page is a concept built for validation.</p>
+      </form>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot-row">
+    <p style="margin:0">Midnight Boba — a late-night delivery concept for UCLA Hill dorms.</p>
+    <p style="margin:0" class="proto">Prototype only. Not yet operating.</p>
+    <p style="margin:0">Built by Headcount: 1</p>
+  </div>
+</footer>
+
+</body>
+</html>
